@@ -109,7 +109,7 @@ private:
     void SendDiscovery();
     void SendMotion();
     void SendEvents();
-    bool GetCurrentValue(int32 Index, double& OutValue, bool& OutBool) const;
+    void GetCurrentValue(int32 Index, double& OutValue, bool& OutBool) const;
 
     /// Wire-string conversion table mirroring the C# core's
     /// Conversions.TryGetFactor (ogsa-ts-dotnet); returns false for

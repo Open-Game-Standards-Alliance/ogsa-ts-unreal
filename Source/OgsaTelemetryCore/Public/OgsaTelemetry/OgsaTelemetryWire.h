@@ -172,10 +172,10 @@ struct Environment
 
 // ---- frame builders (allocation order matches the reference stack) ----
 
-inline int BuildDiscovery(WireBuilder& b, uint16_t schemaVersion,
-                          int64_t sessionUnixUs, const std::string& gameName,
-                          const Environment& env,
-                          const std::vector<ObjectDecl>& objects)
+inline void BuildDiscovery(WireBuilder& b, uint16_t schemaVersion,
+                            int64_t sessionUnixUs, const std::string& gameName,
+                            const Environment& env,
+                            const std::vector<ObjectDecl>& objects)
 {
     b.W.clear();
     b.W.push_back(0);                    // root pointer placeholder
@@ -243,7 +243,6 @@ inline int BuildDiscovery(WireBuilder& b, uint16_t schemaVersion,
             b.W[w + 7] = WireBuilder::StructListPtr(w + 7, ltag, n * 5);
         }
     }
-    return tag;
 }
 
 inline void BuildMotion(WireBuilder& b, double timestamp,

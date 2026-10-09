@@ -1,10 +1,9 @@
 // OgsaTelemetryFrame.h — Unreal Engine → OGSA-TS frame conversion.
 //
 // UE is left-handed, X-forward, Y-right, Z-up. OGSA-TS is left-handed,
-// Z-forward, X-right, Y-up. The map is the axis permutation
-//   (x, y, z)_std = (y, z, z->... )  — concretely: std.X = ue.Y,
-//   std.Y = ue.Z, std.Z = ue.X  (a cyclic permutation, even => handedness
-//   preserved, both left-handed).
+// Z-forward, X-right, Y-up. The map is the cyclic axis permutation
+//   (x, y, z)_std = (y, z, x)_ue — an even permutation, so handedness
+//   is preserved (both left-handed).
 // For orientation, the component map is the INVERSE cycle of q_p's
 // rotation (q_p cycles X→Y→Z; the map cycles X→Z→Y), so the converted
 // rotation is

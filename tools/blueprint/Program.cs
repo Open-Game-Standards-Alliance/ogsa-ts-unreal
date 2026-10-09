@@ -7,7 +7,10 @@ using System.Text;
 
 // Blueprint mirror: reproduce the corpus bytes with explicit word math.
 // If all six match, the same formulas transcribe to C++ for ogsa-ts-unreal.
-var corpus = @"C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\OGSA-Telemetry-Standard\conformance\vectors";
+// Usage: dotnet run -- <corpus-vectors-dir>  (default: the standard repo
+// sibling of this workspace checkout)
+var corpus = args.Length > 0 ? args[0]
+    : Path.Combine("..", "..", "..", "OGSA-Telemetry-Standard", "conformance", "vectors");
 
 var b = new Builder();
 // ---- motion-pose: root(1d,1p) ts, objects: 1 obj {name,pos,orient} ----
