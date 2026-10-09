@@ -73,3 +73,38 @@ pointers and carries allocator-state padding in some structs' tail bytes
 this serializer mirrors it, including quirks; see `docs/wire-layout.md`.
 Cross-implementation compatibility with capnp C++ is an open question
 tracked in the knowledge base.
+
+## Wiring your game's values
+
+**C++ (pull model)** — declare in `BeginPlay`, bind lambdas over your
+components; pose auto-binds to the owner root (`bAutoBindRootPose`):
+
+```cpp
+void AMyVehicle::BeginPlay()
+{
+    Super::BeginPlay();
+    Telemetry = FindComponentByClass<UTelemetryPublisherComponent>();
+    Rpm   = Telemetry->DeclareChannel(TEXT("engine.rpm"), TEXT("rpm"), 0, 9000, true);
+    Speed = Telemetry->DeclareChannel(TEXT("vehicle.speed"), TEXT("m/s"));
+    Gear  = Telemetry->DeclareChannel(TEXT("transmission.gear"), TEXT(""));
+
+    Telemetry->BindChannelRaw(Rpm,  [this]{ return EngineComp->Rpm; });
+    Telemetry->BindChannel(Speed, [this]{ return SpeedKmh; }, TEXT("km/h"));
+    Telemetry->BindChannelRaw(Gear, [this]{ return (double)Gearbox->GetCurrentGear(); });
+}
+
+void AMyVehicle::NotifyHit(UPrimitiveComponent*, AActor*, UPrimitiveComponent*,
+                           FVector NormalImpulse, const FHitResult&)
+{
+    Telemetry->FireEvent(TEXT("body.impact"),
+        FMath::Clamp(NormalImpulse.Size() / 100000.f, 0.f, 1.f), 0.25f,
+        NormalImpulse.GetSafeNormal());
+}
+```
+
+**Blueprint-only (push model)** — no C++ needed: add the component, call
+`Declare Channel` in BeginPlay (store the handles), then `Set Channel` from
+your Blueprint on tick or on change (values must already be in the
+channel's declared unit), and `Fire Event` from collision/animation
+notifications. C++ pull bindings and Blueprint pushes can coexist on
+different channels.
