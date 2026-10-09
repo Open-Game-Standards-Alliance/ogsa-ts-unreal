@@ -121,11 +121,14 @@ bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
     if (Pair("rps",  "rpm", 60.0)) return true;
     // acceleration (g-force)
     if (Pair("g",    "m/s^2", 9.80665)) return true;
+    // acceleration (ft/s^2)
+    if (Pair("ft/s^2", "m/s^2", 0.3048)) return true;
     // mass (gram)
     if (Pair("g",    "kg",  1e-3)) return true;
     // pressure
     if (Pair("bar",  "Pa",  1e5)) return true;
     if (Pair("psi",  "Pa",  6894.757293168361)) return true;
+    if (Pair("kPa",  "Pa",  1000.0)) return true;
     // ratio
     if (Pair("%",    "",    1e-2)) return true;
     // temperature (affine)
