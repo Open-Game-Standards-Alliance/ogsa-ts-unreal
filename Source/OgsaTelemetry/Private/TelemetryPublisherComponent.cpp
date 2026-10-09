@@ -187,7 +187,9 @@ void UTelemetryPublisherComponent::SendDiscovery()
     Obj.TypeLabel = TCHAR_TO_UTF8(*TypeLabel);
     Obj.Type = 0; // vehicle
     Obj.Primary = true;
-    Obj.Channels.assign(Declarations.begin(), Declarations.End());
+    Obj.Channels.clear();
+    Obj.Channels.reserve((size_t)Declarations.Num());
+    for (const auto& D : Declarations) Obj.Channels.push_back(D);
     BuildDiscovery(B, 1, SessionStartUnixUs,
         TCHAR_TO_UTF8(*(GameName.IsEmpty()
             ? FApp::GetProjectName() : GameName)),

@@ -104,7 +104,8 @@ private:
     int64 SessionStartUnixUs = 0;
     bool bLocked = false;
 
-    void Send(FrameType Type, const std::vector<uint8_t>& Datagram);
+    void Send(ogsa::telemetry::FrameType Type,
+             const std::vector<uint8_t>& Datagram);
     void SendDiscovery();
     void SendMotion();
     void SendEvents();
