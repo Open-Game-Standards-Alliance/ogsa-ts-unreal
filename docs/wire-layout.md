@@ -9,7 +9,7 @@ never sign-extend into the upper half).
 ## Message framing
 
 - Datagram = `OMT1` + frameType(u8) + 3 reserved bytes + message
-- Message (1 segment) = `[u32 0][u32 segWords][u32 pad][u32 pad]` + words
+- Message (1 segment) = `[u32 0][u32 segWords]` + words — table is an even u32 count (canonical; 1 segment = exactly 1 word, no pad)
 
 ## Pointer encoding
 

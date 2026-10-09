@@ -119,7 +119,7 @@ public:
         auto put32 = [&d](uint32_t v) {
             for (int i = 0; i < 4; i++) d.push_back((uint8_t)(v >> (8 * i)));
         };
-        put32(0); put32((uint32_t)W.size()); put32(0); put32(0);
+        put32(0); put32((uint32_t)W.size()); // 1-segment table: 1 word, no pad (canonical)
         for (uint64_t w : W)
             for (int i = 0; i < 8; i++) d.push_back((uint8_t)(w >> (8 * i)));
         return d;

@@ -111,8 +111,7 @@ class Builder
         var msg = new List<byte>();
         msg.AddRange(BitConverter.GetBytes(0u));
         msg.AddRange(BitConverter.GetBytes((uint)w.Count));
-        msg.AddRange(BitConverter.GetBytes(0u));
-        msg.AddRange(BitConverter.GetBytes(0u)); // table is 2 words
+        // canonical: 1-segment table is exactly 1 word (no pad)
         foreach (var x in w) msg.AddRange(BitConverter.GetBytes(x));
         var d = new byte[8 + msg.Count];
         d[0] = (byte)'O'; d[1] = (byte)'M'; d[2] = (byte)'T'; d[3] = (byte)'1'; d[4] = frameType;
