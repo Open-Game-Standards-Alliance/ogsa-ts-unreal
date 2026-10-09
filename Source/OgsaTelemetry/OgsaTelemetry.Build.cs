@@ -6,6 +6,6 @@ public class OgsaTelemetry : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PublicDependencyModuleNames.AddRange(
-            new[] { "Core", "CoreUObject", "Engine", "OgsaTelemetryCore" });
+            new[] { "Core", "CoreUObject", "Engine", "Sockets", "OgsaTelemetryCore" });
     }
 }
