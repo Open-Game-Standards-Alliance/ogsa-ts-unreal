@@ -5,10 +5,9 @@ Unreal Engine plugin for the [OGSA Telemetry Standard (OGSA-TS)](../OGSA-Telemet
 platforms, haptic hardware, dashboards, and loggers on the player's local
 network, over UDP multicast. Nothing leaves the LAN.
 
-Status: **validated** — serializer conformance 10/10 and end-to-end in UE 5.8 (channels=3, r=10 m circle, quaternion norm holds). Hand-rolled C++ serializer (no Cap.n' Proto
+Status: **validated** — serializer conformance 10/10 and end-to-end in UE 5.8 (channels=3, r=10 m circle, quaternion norm holds); UE module compiled and the unit-conversion table verified on the wire against the C# core (`OgsaConversionTestActor`, all five probe channels). Hand-rolled C++ serializer (no Cap.n' Proto
 dependency) proven byte-identical against the standard's conformance
-corpus via the C# blueprint mirror (`tools/blueprint`, 6/6 MATCH); the C++
-transcription and UE module are pending first compile in a UE environment.
+corpus via the C# blueprint mirror (`tools/blueprint`, 6/6 MATCH).
 
 ## Approach: corpus-first, dependency-free
 
@@ -29,6 +28,13 @@ cmake -B build && cmake --build build
 
 Expected: 6 corpus PASS + 4 frame-conversion PASS, exit 0. Run it after
 any serializer change and after every corpus regeneration.
+
+In-engine verification: `sync-plugin.ps1 -Project <path> [-Build]`
+mirrors the plugin into a UE project's `Plugins/OgsaTelemetry` (and with
+`-Build` compiles the Editor target). Place `OgsaConversionTestActor` in
+a level and watch ogsa-ts-dotnet's `TelemetryReceive` — expected wire
+values are documented in the actor's .cpp, including one
+intentionally-rejected bind that must read `0.00`.
 
 ## Quick start (in-engine)
 
@@ -61,6 +67,7 @@ test (identity fixed, UE yaw → standard yaw, norm preserved).
 |---|---|
 | `Source/OgsaTelemetryCore/` | Pure C++: wire encoding + frame conversion (no engine deps) |
 | `Source/OgsaTelemetry/` | UE module: `UTelemetryPublisherComponent`, FSocket multicast sender, unit conversions |
+| `sync-plugin.ps1` | Mirror the plugin into a UE test project (`-Build` compiles it) |
 | `Test/` | Standalone conformance binary (corpus + conversion checks) |
 | `tools/blueprint/` | C# formula mirror — the proof that the layout math is exact (6/6 MATCH) |
 | `docs/wire-layout.md` | The reverse-engineered layout map (pointer encoding, allocation orders, quirks) |
