@@ -24,16 +24,16 @@ static void Check(const char* name, bool ok, const char* detail = "")
                 ok || !*detail ? "" : " — ", detail);
 }
 
-static std::string HexToBytes(const std::filesystem::path& p)
+static std::vector<uint8_t> HexToBytes(const std::filesystem::path& p)
 {
     std::ifstream f(p);
     std::stringstream ss; ss << f.rdbuf();
     std::string hex = ss.str(), out;
     for (char c : hex)
         if (c != '\n' && c != '\r' && c != ' ') out += c;
-    std::string bytes;
+    std::vector<uint8_t> bytes;
     for (size_t i = 0; i + 1 < out.size(); i += 2)
-        bytes += (char)std::strtol(out.substr(i, 2).c_str(), nullptr, 16);
+        bytes.push_back((uint8_t)std::strtol(out.substr(i, 2).c_str(), nullptr, 16));
     return bytes;
 }
 
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 
     // ---- UE frame conversion ----
     {
-        Vec3 s = ToStandard({ 1, 2, 3 }); // ue X-fwd Y-right Z-up
+        Vec3 s = ToStandard(Vec3{ 1, 2, 3 }); // ue X-fwd Y-right Z-up
         Check("frame: permutation (x,y,z)->(y,z,x)",
               s.X == 2 && s.Y == 3 && s.Z == 1);
 
