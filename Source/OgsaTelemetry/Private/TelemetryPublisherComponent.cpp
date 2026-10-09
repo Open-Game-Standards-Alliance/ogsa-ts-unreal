@@ -2,6 +2,7 @@
 #include "TelemetryPublisherComponent.h"
 #include "Sockets.h"
 #include "SocketSubsystem.h"
+#include "Misc/App.h"
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
 
@@ -18,7 +19,7 @@ void UTelemetryPublisherComponent::BeginPlay()
 
     FDateTime Now = FDateTime::UtcNow();
     SessionStartUnixUs =
-        (int64)Now.ToUnixTimestamp() * 1000000 + Now.GetMicrosecond();
+        (int64)Now.ToUnixTimestamp() * 1000000 + (int64)Now.GetMillisecond() * 1000;
 
     ISocketSubsystem* SS = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
     if (SS)
@@ -28,8 +29,8 @@ void UTelemetryPublisherComponent::BeginPlay()
         {
             Socket->SetMulticastLoopback(true);
             Socket->SetMulticastTtl(TTL);
-            TSharedRef<FInternetAddr> Addr =
-                SS->CreateInternetAddr(0, (uint32)Port);
+            TSharedRef<FInternetAddr> Addr = SS->CreateInternetAddr();
+            Addr->SetPort((uint32)Port);
             bool bIsValid = false;
             Addr->SetIp(*MulticastGroup, bIsValid);
             if (bIsValid) Endpoint = Addr;
@@ -143,8 +144,8 @@ void UTelemetryPublisherComponent::FireEvent(const FString& Name,
     E.Intensity = Intensity;
     E.Duration = Duration;
     // UE LH (X-fwd, Y-right, Z-up) -> standard (Z-fwd, X-right, Y-up)
-    Vec3 d = ToStandard({ (float)Direction.X, (float)Direction.Y,
-                          (float)Direction.Z });
+    Vec3 d = ToStandard(Vec3{ (float)Direction.X, (float)Direction.Y,
+                              (float)Direction.Z });
     E.Direction = d;
     E.HasDirection = !Direction.IsNearlyZero();
     RecentEvents.Add({ E, Clock });
@@ -186,10 +187,10 @@ void UTelemetryPublisherComponent::SendDiscovery()
     Obj.TypeLabel = TCHAR_TO_UTF8(*TypeLabel);
     Obj.Type = 0; // vehicle
     Obj.Primary = true;
-    Obj.Channels = Declarations;
+    Obj.Channels.assign(Declarations.begin(), Declarations.End());
     BuildDiscovery(B, 1, SessionStartUnixUs,
-        TCHAR_TO_UTF8(*GameName.IsEmpty()
-            ? FApp::GetProjectName() : GameName),
+        TCHAR_TO_UTF8(*(GameName.IsEmpty()
+            ? FApp::GetProjectName() : GameName)),
         Environment{}, { Obj });
     Send(FrameType::Discovery, B.Wrap(FrameType::Discovery));
 }
@@ -204,7 +205,7 @@ void UTelemetryPublisherComponent::SendMotion()
     {
         const FTransform T = GetOwner()->GetActorTransform();
         const FVector P = T.GetTranslation();     // cm -> m, UE -> standard
-        O.Position = ToStandard({ (float)P.X, (float)P.Y, (float)P.Z });
+        O.Position = ToStandard(Vec3{ (float)P.X, (float)P.Y, (float)P.Z });
         O.Position.X /= 100.f; O.Position.Y /= 100.f; O.Position.Z /= 100.f;
         const FQuat Q = T.GetRotation();
         O.Orientation = ToStandard({ (float)Q.X, (float)Q.Y,

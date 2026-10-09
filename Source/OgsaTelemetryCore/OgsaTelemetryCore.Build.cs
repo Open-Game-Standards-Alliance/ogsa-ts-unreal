@@ -7,7 +7,8 @@ public class OgsaTelemetryCore : ModuleRules
     public OgsaTelemetryCore(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-        PublicIncludePaths.Add("Public/OgsaTelemetry");
-        PublicDependencyModuleNames.Add("Core"); // module boilerplate only; headers stay std-only
+        // Public/ is a default include root; headers live in Public/OgsaTelemetry.
+        // Headers are std-only; Core is needed just for the module boilerplate.
+        PublicDependencyModuleNames.Add("Core");
     }
 }
