@@ -5,7 +5,7 @@ Unreal Engine plugin for the [OGSA Telemetry Standard (OGSA-TS)](../OGSA-Telemet
 platforms, haptic hardware, dashboards, and loggers on the player's local
 network, over UDP multicast. Nothing leaves the LAN.
 
-Status: **bootstrap** — hand-rolled C++ serializer (no Cap'n Proto
+Status: **bootstrap, serializer proven** — conformance 10/10 (corpus byte-exact + conversion) on MSVC/VS2022. Hand-rolled C++ serializer (no Cap.n Proto
 dependency) proven byte-identical against the standard's conformance
 corpus via the C# blueprint mirror (`tools/blueprint`, 6/6 MATCH); the C++
 transcription and UE module are pending first compile in a UE environment.
