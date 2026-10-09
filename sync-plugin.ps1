@@ -42,8 +42,15 @@ Write-Host "synced -> $dst"
 
 if ($Build) {
     if (-not $EngineDir) {
-        $EngineDir = (Get-ItemProperty 'HKLM:\SOFTWARE\EpicGames\Unreal Engine\*' -ErrorAction SilentlyContinue |
-            Sort-Object PSChildName -Descending | Select-Object -First 1).InstalledDirectory
+        # registry first (validate: stale entries point at missing dirs),
+        # then the standard launcher install glob
+        $cands = @(Get-ItemProperty 'HKLM:\SOFTWARE\EpicGames\Unreal Engine\*' -ErrorAction SilentlyContinue |
+            Where-Object { $_.InstalledDirectory -and (Test-Path (Join-Path $_.InstalledDirectory 'Engine\Build\BatchFiles\Build.bat')) } |
+            Select-Object -ExpandProperty InstalledDirectory)
+        $cands += @(Get-ChildItem 'C:\Program Files\Epic Games\UE_*' -Directory -ErrorAction SilentlyContinue |
+            Where-Object { Test-Path (Join-Path $_.FullName 'Engine\Build\BatchFiles\Build.bat') } |
+            Select-Object -ExpandProperty FullName)
+        $EngineDir = $cands | Sort-Object -Unique | Select-Object -Last 1
     }
     if (-not $EngineDir -or -not (Test-Path $EngineDir)) { throw "no engine found; pass -EngineDir" }
     $name = $uprojectFile.BaseName
