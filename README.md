@@ -52,8 +52,7 @@ owner root (world transform, cm→m, UE frame → OGSA-TS frame).
 UE is left-handed, X-forward, Y-right, Z-up; OGSA-TS is left-handed,
 Z-forward, X-right, Y-up. The map is the cyclic permutation
 `(x,y,z)_std = (y,z,x)_ue` (even permutation — handedness preserved), and
-orientation converts by the similarity transform `q_std = q_p · q_ue ·
-q_p⁻¹` with `q_p = (0.5, 0.5, 0.5, 0.5)` — verified in the conformance
+orientation converts by `q_std = q_p⁻¹ · q_ue · q_p` with `q_p = (0.5, 0.5, 0.5, 0.5)` (the component map is the inverse cycle of q_p's rotation) — verified in the conformance
 test (identity fixed, UE yaw → standard yaw, norm preserved).
 
 ## Layout

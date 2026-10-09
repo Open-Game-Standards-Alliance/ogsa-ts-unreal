@@ -5,12 +5,12 @@
 //   (x, y, z)_std = (y, z, z->... )  — concretely: std.X = ue.Y,
 //   std.Y = ue.Z, std.Z = ue.X  (a cyclic permutation, even => handedness
 //   preserved, both left-handed).
-// For orientation, that permutation is the rotation P with quaternion
-// q_p = (x=0.5, y=0.5, z=0.5, w=0.5) (120° about (1,1,1)/√3), and the
-// converted rotation is the similarity transform
-//   q_std = q_p · q_ue · q_p⁻¹.
-// Verified in Test/main.cpp: identity stays identity; a UE yaw about Z-up
-// maps to a standard yaw about Y with equal angle and sign.
+// For orientation, the component map is the INVERSE cycle of q_p's
+// rotation (q_p cycles X→Y→Z; the map cycles X→Z→Y), so the converted
+// rotation is
+//   q_std = q_p⁻¹ · q_ue · q_p
+// (verified: identity fixed; UE yaw about Z-up rotates standard forward
+// toward standard right — equal angle, equal sense; norm preserved).
 #pragma once
 #include "OgsaTelemetryWire.h"
 
@@ -37,7 +37,7 @@ inline Quat ToStandard(const Quat& ue)
 {
     static constexpr Quat Qp{ 0.5f, 0.5f, 0.5f, 0.5f };
     static constexpr Quat QpInv{ -0.5f, -0.5f, -0.5f, 0.5f };
-    return Multiply(Multiply(Qp, ue), QpInv);
+    return Multiply(Multiply(QpInv, ue), Qp);
 }
 
 // rotate v by q (v' = q v q*)
