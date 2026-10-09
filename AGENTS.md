@@ -17,5 +17,10 @@
 - UE test projects consume a *copy* under <project>/Plugins/OgsaTelemetry —
   after changing the plugin run ./sync-plugin.ps1 -Project <path> (add
   -Build to compile the Editor target) so the copy never drifts.
+- TestProject/ is the in-repo host project: ./sync-plugin.ps1 -Project
+  ./TestProject -Build compiles the UE module from the repo alone (no
+  external project). Target rules must use V7 + Unreal5_8 to match the
+  engine's own build (common-build-products rule rejects diverging
+  warning levels).
 - Products docs describe current state only; history lives in the
   Open-Game-Standards-Alliance knowledge base (knowledge/README.md bridge).

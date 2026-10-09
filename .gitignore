@@ -7,3 +7,5 @@ Saved/
 *.sln
 *.vcxproj
 .DS_Store
+# test project: the plugin copy is synced in, never committed
+TestProject/Plugins/
