@@ -1,0 +1,14 @@
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\bin\Debug\net10.0\blueprint.exe
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\bin\Debug\net10.0\blueprint.deps.json
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\bin\Debug\net10.0\blueprint.runtimeconfig.json
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\bin\Debug\net10.0\blueprint.dll
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\bin\Debug\net10.0\blueprint.pdb
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.AssemblyInfoInputs.cache
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.AssemblyInfo.cs
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.csproj.CoreCompileInputs.cache
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.dll
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\refint\blueprint.dll
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.pdb
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\blueprint.genruntimeconfig.cache
+C:\Users\ItsVRK\Documents\Projects\Code\Open-Game-Standards-Alliance\ogsa-ts-unreal\tools\blueprint\obj\Debug\net10.0\ref\blueprint.dll

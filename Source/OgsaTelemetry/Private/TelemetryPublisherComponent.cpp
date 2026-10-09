@@ -53,7 +53,17 @@ FOgsaChannelHandle UTelemetryPublisherComponent::DeclareChannel(
     const FString& Name, const FString& Unit,
     double Min, double Max, bool HasRange)
 {
-    checkf(!bLocked, TEXT("Declarations lock at the first tick (receivers cache descriptors by id)"));
+    if (bLocked)
+    {
+        // runtime guard, not checkf: check macros compile out in Shipping,
+        // where a late declaration would silently append a channel that
+        // receivers (which cache descriptors by id) never discover.
+        // The rejected handle keeps Id = -1; bind/push calls reject it.
+        UE_LOG(LogTemp, Error,
+            TEXT("OGSA-TS: DeclareChannel('%s') after the first tick — declarations are locked (receivers cache descriptors by id)"),
+            *Name);
+        return FOgsaChannelHandle();
+    }
     ChannelDecl D;
     D.Name = TCHAR_TO_UTF8(*Name);
     D.Unit = TCHAR_TO_UTF8(*Unit);
@@ -68,7 +78,8 @@ FOgsaChannelHandle UTelemetryPublisherComponent::DeclareBooleanChannel(
     const FString& Name)
 {
     FOgsaChannelHandle H = DeclareChannel(Name, TEXT(""), 0, 0, false);
-    Bindings[H.Id].bBool = true;
+    if (H.Id >= 0)
+        Bindings[H.Id].bBool = true;
     return H;
 }
 
@@ -76,7 +87,17 @@ void UTelemetryPublisherComponent::SetChannel(FOgsaChannelHandle Handle,
                                               double Value)
 {
     if (Bindings.IsValidIndex(Handle.Id))
+    {
+        if (Bindings[Handle.Id].bBool)
+        {
+            // parity with the C# core: type mismatch is rejected, not coerced
+            UE_LOG(LogTemp, Error,
+                TEXT("OGSA-TS: SetChannel(double) on boolean channel id %d rejected"),
+                Handle.Id);
+            return;
+        }
         Bindings[Handle.Id].Pushed = Value;
+    }
 }
 
 void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
@@ -84,8 +105,14 @@ void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
 {
     if (Bindings.IsValidIndex(Handle.Id))
     {
+        if (!Bindings[Handle.Id].bBool)
+        {
+            UE_LOG(LogTemp, Error,
+                TEXT("OGSA-TS: SetBoolChannel on numeric channel id %d rejected"),
+                Handle.Id);
+            return;
+        }
         Bindings[Handle.Id].bBoolValue = Value;
-        Bindings[Handle.Id].bBool = true;
     }
 }
 
@@ -190,7 +217,7 @@ void UTelemetryPublisherComponent::FireEvent(const FString& Name,
     RecentEvents.Add({ E, Clock });
 }
 
-bool UTelemetryPublisherComponent::GetCurrentValue(int32 Index,
+void UTelemetryPublisherComponent::GetCurrentValue(int32 Index,
     double& OutValue, bool& OutBool) const
 {
     const FBinding& B = Bindings[Index];
@@ -205,7 +232,6 @@ bool UTelemetryPublisherComponent::GetCurrentValue(int32 Index,
         OutValue = B.Pushed;
         OutBool = B.bBoolValue;
     }
-    return true;
 }
 
 void UTelemetryPublisherComponent::Send(FrameType Type,
@@ -269,11 +295,11 @@ void UTelemetryPublisherComponent::SendMotion()
 
 void UTelemetryPublisherComponent::SendEvents()
 {
+    if (RecentEvents.IsEmpty()) return; // check before building the vector
     WireBuilder B;
     std::vector<EventInput> Evs;
     for (const auto& Pair : RecentEvents)
         Evs.push_back(Pair.Key);
-    if (Evs.empty()) return;
     BuildEventFrame(B, Clock, Evs);
     Send(FrameType::Event, B.Wrap(FrameType::Event));
 }
