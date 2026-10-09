@@ -59,3 +59,4 @@ if ($Build) {
         -project="$($uprojectFile.FullName)" -WaitMutex
     if ($LASTEXITCODE -ne 0) { throw "editor target build failed ($LASTEXITCODE)" }
 }
+exit 0
