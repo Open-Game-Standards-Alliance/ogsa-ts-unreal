@@ -1,7 +1,11 @@
 # OGSA-TS wire layout (as emitted by the reference stack)
 
-Reverse-engineered from the conformance corpus; proven by
-`tools/blueprint` (C# mirror, 6/6 byte-identical) before C++ transcription.
+Implementation notes for the C++ serializer. The normative framing spec
+lives in the standard repo ([IMPLEMENTING.md](../../OGSA-Telemetry-Standard/IMPLEMENTING.md),
+[implementation-udp.md](../../OGSA-Telemetry-Standard/implementation-udp.md));
+this document records the layout details the corpus serializer mirrors,
+verified by `tools/blueprint` (C# mirror, 6/6 byte-identical).
+
 All words little-endian u64. Offsets are in words, relative to the end of
 the pointer word (may be negative — truncate the shifted offset to u32,
 never sign-extend into the upper half).
