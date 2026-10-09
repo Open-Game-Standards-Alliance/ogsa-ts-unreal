@@ -1,0 +1,9 @@
+Build/
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.sln
+*.vcxproj
+.DS_Store
