@@ -11,6 +11,7 @@ using System.Text;
 // sibling of this workspace checkout)
 var corpus = args.Length > 0 ? args[0]
     : Path.Combine("..", "..", "..", "OGSA-Telemetry-Standard", "conformance", "vectors");
+int diffs = 0; // CI exit code: 0 only when every vector matched
 
 var b = new Builder();
 // ---- motion-pose: root(1d,1p) ts, objects: 1 obj {name,pos,orient} ----
@@ -58,13 +59,15 @@ b.Object(dtag, 0, "demo_car", "local", "conformance car", "origin", (0, true),
         ("lights.headlights", "", null, null) });
 Check("discovery-channels", b, 0, corpus);
 
-static void Check(string name, Builder b, byte ft, string corpus)
+void Check(string name, Builder b, byte ft, string corpus)
 {
     var hex = Convert.ToHexString(b.Wrap(ft)).ToLowerInvariant();
     var want = string.Concat(File.ReadAllLines(Path.Combine(corpus, name + ".hex"))).Trim();
-    Console.WriteLine($"{name}: {(hex == want ? "MATCH" : "DIFF")}");
-    if (hex != want)
+    var ok = hex == want;
+    Console.WriteLine($"{name}: {(ok ? "MATCH" : "DIFF")}");
+    if (!ok)
     {
+        diffs++;
         for (int i = 0; i < Math.Max(hex.Length, want.Length); i += 2)
         {
             var a = hex.Length > i + 1 ? hex.Substring(i, 2) : "--";
@@ -72,6 +75,13 @@ static void Check(string name, Builder b, byte ft, string corpus)
             if (a != w) { Console.WriteLine($"  byte {i / 2}: got {a} want {w}"); if (i > 120) break; }
         }
     }
+}
+
+// CI contract: exit 0 only when every vector matched
+if (diffs > 0)
+{
+    Console.WriteLine($"{diffs} vector(s) DIFF");
+    Environment.Exit(1);
 }
 
 class Builder
