@@ -89,40 +89,76 @@ void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
     }
 }
 
-double UTelemetryPublisherComponent::SourceFactor(const FString& From,
-                                                  const FString& To,
-                                                  double& OutOffset)
+bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
+                                                const FString& To,
+                                                double& OutFactor,
+                                                double& OutOffset)
 {
+    // Mirrors Conversions.TryGetFactor in the C# core (ogsa-ts-dotnet):
+    // same pairs, same factors. Wire strings per UnitInfo.ToWireString.
+    // Keep both tables in lockstep — the engines must provably agree.
     OutOffset = 0;
-    if (From == To) return 1.0;
+    OutFactor = 1.0;
+    if (From == To) return true;
     auto Is = [](const FString& A, const char* B) {
         return A.Equals(UTF8_TO_TCHAR(B), ESearchCase::IgnoreCase);
     };
-    if (Is(From, "km/h") && Is(To, "m/s")) return 1.0 / 3.6;
-    if (Is(From, "mph") && Is(To, "m/s")) return 0.44704;
-    if (Is(From, "kn") && Is(To, "m/s")) return 1852.0 / 3600.0;
-    if (Is(From, "deg") && Is(To, "rad")) return PI / 180.0;
-    if (Is(From, "deg/s") && Is(To, "rad/s")) return PI / 180.0;
-    if (Is(From, "psi") && Is(To, "Pa")) return 6894.757293168361;
-    if (Is(From, "bar") && Is(To, "Pa")) return 1e5;
-    if (Is(From, "g") && Is(To, "m/s^2")) return 9.80665;
-    if (Is(From, "rps") && Is(To, "rpm")) return 60.0;
-    if (Is(From, "%") && Is(To, "")) return 1e-2;
-    if (Is(From, "degF") && Is(To, "degC")) { OutOffset = -32.0 / 1.8; return 5.0 / 9.0; }
-    UE_LOG(LogTemp, Error,
-        TEXT("OGSA-TS: no conversion %s -> %s; binding raw"), *From, *To);
-    return 1.0;
+    auto Pair = [&](const char* F, const char* T, double Factor) {
+        if (Is(From, F) && Is(To, T)) { OutFactor = Factor; return true; }
+        return false;
+    };
+    // speed
+    if (Pair("km/h", "m/s", 1.0 / 3.6)) return true;
+    if (Pair("mph",  "m/s", 0.44704)) return true;
+    if (Pair("ft/s", "m/s", 0.3048)) return true;
+    if (Pair("kn",   "m/s", 1852.0 / 3600.0)) return true;
+    // length
+    if (Pair("ft",   "m",   0.3048)) return true;
+    // angle
+    if (Pair("deg",  "rad", PI / 180.0)) return true;
+    if (Pair("deg/s", "rad/s", PI / 180.0)) return true;
+    // rotation rate
+    if (Pair("rps",  "rpm", 60.0)) return true;
+    // acceleration (g-force)
+    if (Pair("g",    "m/s^2", 9.80665)) return true;
+    // mass (gram)
+    if (Pair("g",    "kg",  1e-3)) return true;
+    // pressure
+    if (Pair("bar",  "Pa",  1e5)) return true;
+    if (Pair("psi",  "Pa",  6894.757293168361)) return true;
+    // ratio
+    if (Pair("%",    "",    1e-2)) return true;
+    // temperature (affine)
+    if (Is(From, "degF") && Is(To, "degC"))
+    {
+        OutOffset = -32.0 / 1.8;
+        OutFactor = 5.0 / 9.0;
+        return true;
+    }
+    return false;
 }
 
 void UTelemetryPublisherComponent::BindChannel(
     const FOgsaChannelHandle& Handle, Getter Source, const FString& SourceUnit)
 {
     if (!Bindings.IsValidIndex(Handle.Id)) return;
-    double offset = 0;
-    double f = SourceFactor(SourceUnit,
-        UTF8_TO_TCHAR(Declarations[Handle.Id].Unit.c_str()), offset);
+    double factor = 1.0, offset = 0.0;
+    const FString Target(UTF8_TO_TCHAR(Declarations[Handle.Id].Unit.c_str()));
+    if (!SourceFactor(SourceUnit, Target, factor, offset))
+    {
+        // Parity with the C# core: BindChannel throws on unknown pairs.
+        // Reject the bind (channel falls back to the push model) instead
+        // of silently emitting wrong units on the wire.
+        UE_LOG(LogTemp, Error,
+            TEXT("OGSA-TS: no conversion %s -> %s for channel '%s' (id %d); "
+                 "bind rejected — convert inside the getter or use BindChannelRaw"),
+            *SourceUnit, *Target,
+            *FString(UTF8_TO_TCHAR(Declarations[Handle.Id].Name.c_str())),
+            Handle.Id);
+        return;
+    }
     Bindings[Handle.Id].Get = MoveTemp(Source);
-    Bindings[Handle.Id].Factor = f;
+    Bindings[Handle.Id].Factor = factor;
     Bindings[Handle.Id].Offset = offset;
 }
 

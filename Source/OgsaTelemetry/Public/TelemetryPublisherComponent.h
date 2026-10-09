@@ -111,6 +111,9 @@ private:
     void SendEvents();
     bool GetCurrentValue(int32 Index, double& OutValue, bool& OutBool) const;
 
-    static double SourceFactor(const FString& From, const FString& To,
-                               double& OutOffset);
+    /// Wire-string conversion table mirroring the C# core's
+    /// Conversions.TryGetFactor (ogsa-ts-dotnet); returns false for
+    /// unknown pairs so the bind can be rejected like the C# throw.
+    static bool SourceFactor(const FString& From, const FString& To,
+                             double& OutFactor, double& OutOffset);
 };
