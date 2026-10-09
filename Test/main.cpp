@@ -8,7 +8,9 @@
 // <corpusDir> defaults to ../../OGSA-Telemetry-Standard/conformance
 #include "OgsaTelemetry/OgsaTelemetryWire.h"
 #include "OgsaTelemetry/OgsaTelemetryFrame.h"
+#include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
