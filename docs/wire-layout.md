@@ -48,14 +48,18 @@ never sign-extend into the upper half).
 - EventFrame: events(tag + elements), then per-event: **direction, name,
   object** (direction first!)
 
-## Quirks (mirrored deliberately)
+## Notes (verified against canonical capnp 2.x)
 
 1. Struct-typed fields (Vector3/Quaternion/NamedPoint/Range) are encoded
-   as **pointers**, not inline, by the reference stack (Capnp.Net). This
-   deviates from canonical capnp C++ inline-struct layout — cross-library
-   compatibility is an open question (KB-tracked).
+   as **pointers** — and this IS canonical: byte-comparison against a
+   pycapnp-built message shows identical layout (KB C-20261009-MBP-14).
 2. Padding bytes of truncated structs can carry allocator state:
    motion-pose's Vector3 pad is `ffffffff`; others are zero. Receivers
    must ignore pads; emitters matching the corpus mirror them.
-3. Unset unions carry discriminant `0xffff`.
+3. Unset unions: the C# stack writes discriminant `0xffff` where canonical
+   builders write `0` — both mean "schema default variant" to any reader;
+   cosmetically different, semantically compatible.
 4. Enum ordinals matter: `ObjectType.vehicle = 0`, `ContactMedium.asphalt = 1`.
+5. Segment table: an even u32 count — 1 segment = exactly 1 word, no pad
+   (the historical 2-word form was a bug, fixed 2026-10-09; see KB
+   C-20261009-MBP-14).

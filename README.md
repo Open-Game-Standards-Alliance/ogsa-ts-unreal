@@ -67,12 +67,12 @@ test (identity fixed, UE yaw → standard yaw, norm preserved).
 
 ## Wire-layout notes
 
-The reference stack (Capnp.Net.Runtime) encodes struct-typed fields as
-pointers and carries allocator-state padding in some structs' tail bytes
-(motion-pose's position pad is `ffffffff`). The corpus is the contract —
-this serializer mirrors it, including quirks; see `docs/wire-layout.md`.
-Cross-implementation compatibility with capnp C++ is an open question
-tracked in the knowledge base.
+The wire layout is **canonical Cap'n Proto**: proven by decoding the
+corpus with pycapnp (official capnproto C++ 2.x) — all six golden vectors
+read with correct values, and byte-comparison against a pycapnp-built
+message shows identical layout. Allocator-state padding
+(motion-pose's position pad is `ffffffff`) and unset-union tags are
+cosmetic, receiver-safe differences; see `docs/wire-layout.md`.
 
 ## Wiring your game's values
 
