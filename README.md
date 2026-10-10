@@ -5,6 +5,8 @@ Unreal Engine plugin for the [OGSA Telemetry Standard (OGSA-TS)](../OGSA-Telemet
 platforms, haptic hardware, dashboards, and loggers on the player's local
 network, over UDP multicast. Nothing leaves the LAN.
 
+Community & support: [Discord](https://discord.gg/tseF4Q6U99)
+
 Status: **validated** — serializer conformance 10/10 and end-to-end in UE 5.8 (channels=3, r=10 m circle, quaternion norm holds); UE module compiled and the unit-conversion table verified on the wire against the C# core (`OgsaConversionTestActor`, all five probe channels). Hand-rolled C++ serializer (no Cap.n' Proto
 dependency) proven byte-identical against the standard's conformance
 corpus via the C# blueprint mirror (`tools/blueprint`, 6/6 MATCH).
