@@ -9,3 +9,5 @@ Saved/
 .DS_Store
 # test project: the plugin copy is synced in, never committed
 TestProject/Plugins/
+tools/blueprint/obj/
+tools/blueprint/bin/
