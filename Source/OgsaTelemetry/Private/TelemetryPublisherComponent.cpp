@@ -116,6 +116,26 @@ void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
     }
 }
 
+void UTelemetryPublisherComponent::SetBodyDynamics(FVector SpecificForce,
+                                                   FVector AngularVelocity)
+{
+    // UE body-axis labels (X surge, Y sway, Z heave) -> standard C-4
+    // (x sway, y heave, z surge): the same even cyclic permutation the
+    // pose path uses (handedness preserved, pseudovectors included)
+    BodySpecificForce = ToStandard(Vec3{ (float)SpecificForce.X,
+                                         (float)SpecificForce.Y,
+                                         (float)SpecificForce.Z });
+    BodyAngularVelocity = ToStandard(Vec3{ (float)AngularVelocity.X,
+                                           (float)AngularVelocity.Y,
+                                           (float)AngularVelocity.Z });
+    bHasBodyDynamics = true;
+}
+
+void UTelemetryPublisherComponent::ClearBodyDynamics()
+{
+    bHasBodyDynamics = false;
+}
+
 bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
                                                 const FString& To,
                                                 double& OutFactor,
@@ -277,6 +297,13 @@ void UTelemetryPublisherComponent::SendMotion()
         const FQuat Q = T.GetRotation();
         O.Orientation = ToStandard({ (float)Q.X, (float)Q.Y,
                                      (float)Q.Z, (float)Q.W });
+    }
+
+    if (bHasBodyDynamics)
+    {
+        O.HasBodyDynamics = true;
+        O.SpecificForce = BodySpecificForce;
+        O.AngularVelocity = BodyAngularVelocity;
     }
 
     for (int32 i = 0; i < Declarations.Num(); i++)
