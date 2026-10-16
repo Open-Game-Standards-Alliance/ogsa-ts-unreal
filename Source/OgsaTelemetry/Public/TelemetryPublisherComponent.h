@@ -68,6 +68,20 @@ public:
     UFUNCTION(BlueprintCallable, Category = "OGSA")
     void SetBoolChannel(FOgsaChannelHandle Handle, bool Value);
 
+    // ---- body dynamics (native, motion-cueing inputs) ----
+    /// Pushes the bodyDynamics variant per tick: specific force in m/s²,
+    /// accelerometer-style (f = a − g: +1 g on the up axis at rest — what
+    /// an IMU reads), and angular velocity in rad/s, C-4 sense (+x nose-up
+    /// pitch, +y nose-right yaw, +z right-side-down roll). Input vectors
+    /// use UE's body-axis labels (X surge, Y sway, Z heave) and are
+    /// remapped to the standard's (x sway, y heave, z surge) here.
+    /// Call ClearBodyDynamics to stop sending the variant (receivers fall
+    /// back to deriving rates from pose).
+    UFUNCTION(BlueprintCallable, Category = "OGSA")
+    void SetBodyDynamics(FVector SpecificForce, FVector AngularVelocity);
+    UFUNCTION(BlueprintCallable, Category = "OGSA")
+    void ClearBodyDynamics();
+
     // ---- pull model (C++; source units convert at bind) ----
     using Getter = TFunction<double()>;
     void BindChannel(const FOgsaChannelHandle& Handle, Getter Source,
@@ -103,6 +117,9 @@ private:
     double Clock = 0;
     int64 SessionStartUnixUs = 0;
     bool bLocked = false;
+
+    ogsa::telemetry::Vec3 BodySpecificForce, BodyAngularVelocity;
+    bool bHasBodyDynamics = false;
 
     void Send(ogsa::telemetry::FrameType Type,
              const std::vector<uint8_t>& Datagram);

@@ -107,6 +107,19 @@ int main(int argc, char** argv)
         CheckVector(corpus, "motion-multi", FrameType::Motion,
                     b.Wrap(FrameType::Motion));
     }
+    { // motion-bodydynamics (pads mirror the reference generator's pad
+      // bytes: position/specificForce carry ffffffff, angularVelocity 0)
+        MotionObjectInput o; o.Name = "obj";
+        o.Position = { 0.5f, 1.25f, -2.5f };
+        o.Orientation = { 0, 0.5f, 0, 0.875f };
+        o.HasBodyDynamics = true;
+        o.SpecificForce = { 0.25f, 9.5f, -1.5f };
+        o.AngularVelocity = { -0.125f, 0.375f, 0.75f };
+        o.PositionPad = 0xFFFFFFFF;
+        BuildMotion(b, 4.5, { o });
+        CheckVector(corpus, "motion-bodydynamics", FrameType::Motion,
+                    b.Wrap(FrameType::Motion));
+    }
     { // event-impact
         EventInput e; e.Id = 7; e.Name = "body.impact";
         e.Intensity = 0.75f; e.Duration = 0.25f;
@@ -137,6 +150,103 @@ int main(int argc, char** argv)
         float n = std::sqrt(yawStd.X * yawStd.X + yawStd.Y * yawStd.Y
                           + yawStd.Z * yawStd.Z + yawStd.W * yawStd.W);
         Check("frame: quaternion norm preserved", std::abs(n - 1) < 1e-6);
+    }
+
+    // ---- pose → body-dynamics derivation (mirrors the dotnet tests) ----
+    {
+        const float g = BodyDynamicsDeriver::Gravity;
+        const double dt = 1.0 / 60.0;
+
+        { // rest: gravity reaction +1 g on heave (accelerometer-style),
+          // zero rates — also the value after any reset
+            BodyDynamicsDeriver d;
+            d.Sample(dt, { 5, 0, 5 }, { 0, 0, 0, 1 });
+            Check("deriver: rest reads +1 g heave (accelerometer-style)",
+                  std::abs(d.SpecificForce.Y - g) < 1e-3f &&
+                  std::abs(d.SpecificForce.X) < 1e-3f &&
+                  std::abs(d.SpecificForce.Z) < 1e-3f);
+            Check("deriver: rest rates zero",
+                  std::abs(d.AngularVelocity.X) + std::abs(d.AngularVelocity.Y)
+                + std::abs(d.AngularVelocity.Z) < 1e-6f);
+        }
+        { // nose-up rest (stored −x quarter-turn): body forward points
+          // world-up, so gravity reaction reads on +surge
+            BodyDynamicsDeriver d;
+            Quat q{ -0.70710678118f, 0, 0, 0.70710678118f };
+            d.Sample(dt, { 0, 0, 0 }, q);
+            Check("deriver: nose-up rest reads +1 g surge",
+                  std::abs(d.SpecificForce.Z - g) < 1e-3f &&
+                  std::abs(d.SpecificForce.Y) < 1e-3f);
+        }
+        { // yaw sweep (stored +y): positive C-4 yaw rate (nose-right)
+            BodyDynamicsDeriver d;
+            const double w = 1.5;
+            for (int i = 0; i < 60; i++)
+            {
+                double t = i * dt;
+                Quat q{ 0, (float)std::sin(w * t / 2), 0,
+                        (float)std::cos(w * t / 2) };
+                d.Sample(dt, { 0, 0, 0 }, q);
+            }
+            Check("deriver: yaw sweep -> +w on y (C-4 nose-right)",
+                  std::abs(d.AngularVelocity.Y - w) < 1e-3 &&
+                  std::abs(d.AngularVelocity.X) < 1e-3 &&
+                  std::abs(d.AngularVelocity.Z) < 1e-3);
+        }
+        { // pitch sweep (stored +x tilts the nose DOWN): the C-4 pitch
+          // rate equals the euler-rate, i.e. NEGATIVE the sweep rate —
+          // pins the (−x, +y, −z) component map
+            BodyDynamicsDeriver d;
+            const double w = 0.8;
+            for (int i = 0; i < 60; i++)
+            {
+                double t = i * dt;
+                Quat q{ (float)std::sin(w * t / 2), 0, 0,
+                        (float)std::cos(w * t / 2) };
+                d.Sample(dt, { 0, 0, 0 }, q);
+            }
+            Check("deriver: pitch sweep -> −w on x (euler-rate sense)",
+                  std::abs(d.AngularVelocity.X + w) < 1e-3 &&
+                  std::abs(d.AngularVelocity.Y) < 1e-3);
+        }
+        { // roll sweep (stored +z rolls left-side-down): negative C-4 rate
+            BodyDynamicsDeriver d;
+            const double w = 1.1;
+            for (int i = 0; i < 60; i++)
+            {
+                double t = i * dt;
+                Quat q{ 0, 0, (float)std::sin(w * t / 2),
+                        (float)std::cos(w * t / 2) };
+                d.Sample(dt, { 0, 0, 0 }, q);
+            }
+            Check("deriver: roll sweep -> −w on z (euler-rate sense)",
+                  std::abs(d.AngularVelocity.Z + w) < 1e-3);
+        }
+        { // engine-measured velocity beats stale position: accelerating
+          // engine feed (UEVR GetVelocity path) drives surge
+            BodyDynamicsDeriver d;
+            double v = 0;
+            for (int i = 0; i < 90; i++)
+            {
+                v += 2.0 * dt;
+                d.Sample(dt, { 0, 0, 0 }, { 0, 0, 0, 1 }, true,
+                         { 0, 0, (float)v });
+            }
+            Check("deriver: engine velocity drives +2 m/s² surge",
+                  std::abs(d.SpecificForce.Z - 2.0f) < 0.1f &&
+                  std::abs(d.SpecificForce.Y - g) < 0.1f);
+        }
+        { // teleport resets to static values instead of spiking
+            BodyDynamicsDeriver d;
+            for (int i = 0; i < 30; i++)
+                d.Sample(dt, { 0, 0, (float)(i * dt) }, { 0, 0, 0, 1 },
+                         true, { 0, 0, 1 });
+            d.Sample(dt, { 10, 0, 10 }, { 0, 0, 0, 1 });
+            Check("deriver: teleport resets (gravity only, zero rates)",
+                  std::abs(d.SpecificForce.Y - g) < 1e-3f &&
+                  std::abs(d.SpecificForce.Z) < 1e-3f &&
+                  std::abs(d.AngularVelocity.Y) < 1e-6f);
+        }
     }
 
     std::printf("conformance: %d passed, %d failed\n", g_pass, g_fail);
