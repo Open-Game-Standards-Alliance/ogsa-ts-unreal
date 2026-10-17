@@ -1,5 +1,5 @@
 // main.cpp — OGSA-TS C++ serializer conformance test.
-// Rebuilds the standard's six golden vectors from semantic inputs and
+// Rebuilds the standard's seven golden vectors from semantic inputs and
 // byte-compares against conformance/vectors/*.hex, then checks the UE→
 // standard frame conversion. Exit code 0 = all pass.
 //
