@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 
 // Blueprint mirror: reproduce the corpus bytes with explicit word math.
-// If all six match, the same formulas transcribe to C++ for ogsa-ts-unreal.
+// If all seven match, the same formulas transcribe to C++ for ogsa-ts-unreal.
 // Usage: dotnet run -- <corpus-vectors-dir>  (default: the standard repo
 // sibling of this workspace checkout)
 var corpus = args.Length > 0 ? args[0]
@@ -35,6 +35,15 @@ b.MotionObject(e, 0, "player_car", (1f, 0f, 0f), (0f, 0f, 0f, 1f), null);
 b.MotionObject(e, 1, "wingman", (-1f, 0.5f, 2.5f), (0f, 1f, 0f, 0f), null);
 b.PatchRoot(1,1); Check("motion-multi", b, 1, corpus);
 
+// motion-bodydynamics: pose + the bodyDynamics union variant (corpus v2+;
+// allocation order mirrors the reference stack exactly)
+b = new Builder();
+o = b.MotionFrame(4.5);
+e = b.MotionObjectList(o, 1);
+b.MotionObjectBodyDynamics(e, 0, "obj", (0.5f, 1.25f, -2.5f), (0f, 0.5f, 0f, 0.875f),
+    (0.25f, 9.5f, -1.5f), (-0.125f, 0.375f, 0.75f));
+b.PatchRoot(1,1); Check("motion-bodydynamics", b, 1, corpus);
+
 b = new Builder();
 b.EventFrame(0.125, 7, "body.impact", 0.75f, 0.25f, (-1f, 0f, 0f));
 b.PatchRoot(1,1); Check("event-impact", b, 2, corpus);
@@ -44,15 +53,15 @@ for (int i = 20; i < Math.Min(28, b.w.Count); i++) Console.WriteLine($"  my w{i}
 // discovery vectors
 b = new Builder();
 int dtag = b.DiscoveryFrame(1, 1730000000000000L, "conformance",
-    (1.25f, 20f, 1f, 9.5f, 1), 1);
-b.Object(dtag, 0, "obj", "local", null, "origin", (0, true), null);
+    (1.25f, 20f, 1f, 9.5f, 2), 1);   // medium: asphalt = 2 since corpus v3
+b.Object(dtag, 0, "obj", "local", null, "origin", (1, true), null);
 Check("discovery-minimal", b, 0, corpus);
 for (int i = 22; i < 28; i++) System.Console.WriteLine("  my w" + i + " = " + b.w[i].ToString("x16"));
 
 b = new Builder();
 dtag = b.DiscoveryFrame(1, 1730000000000000L, "conformance",
-    (1.25f, 20f, 1f, 9.5f, 1), 1);
-b.Object(dtag, 0, "demo_car", "local", "conformance car", "origin", (0, true),
+    (1.25f, 20f, 1f, 9.5f, 2), 1);
+b.Object(dtag, 0, "demo_car", "local", "conformance car", "origin", (1, true),
     new (string, string, double?, double?)[] {
         ("engine.rpm", "rpm", 0.0, 9000.0),
         ("vehicle.speed", "m/s", 0.0, 30.0),
@@ -179,6 +188,32 @@ class Builder
             w[e + 6] = StructListPtr(e + 6, ltag, channels.Length * 2);
         }
         else w[e + 6] = 0;
+    }
+    public void MotionObjectBodyDynamics(int tag, int index, string name,
+        (float, float, float) pos, (float, float, float, float) quat,
+        (float, float, float) specificForce, (float, float, float) angularVelocity)
+    {
+        int e = tag + 1 + index * 7;
+        // allocation order mirrors the reference stack exactly (locked by
+        // the corpus motion-bodydynamics vector): specificForce words, then
+        // the 0-data/2-ptr BodyDynamics struct (ptr0 points BACKWARD to
+        // specificForce), then angularVelocity, then name/pos/quat
+        int sfAt = Vec3(specificForce, 0xffffffff);
+        int bdAt = Alloc(2);
+        int avAt = Vec3(angularVelocity);
+        w[bdAt] = StructPtr(bdAt, sfAt, 2, 0);
+        w[bdAt + 1] = StructPtr(bdAt + 1, avAt, 2, 0);
+        w[e] = 2;                                  // dynamics union: bodyDynamics
+        w[e + 4] = StructPtr(e + 4, bdAt, 0, 2);   // slot4 -> BodyDynamics
+        int nameAt = Text(name);
+        w[e + 1] = TextPtr(e + 1, nameAt, Encoding.UTF8.GetByteCount(name) + 1);
+        int posAt = Vec3(pos, 0xffffffff);         // corpus quirk: pad ffffffff
+        w[e + 2] = StructPtr(e + 2, posAt, 2, 0);
+        int qAt = Alloc(2);
+        w[qAt] = F32(quat.Item1) | (ulong)F32(quat.Item2) << 32;
+        w[qAt + 1] = F32(quat.Item3) | (ulong)F32(quat.Item4) << 32;
+        w[e + 3] = StructPtr(e + 3, qAt, 2, 0);
+        w[e + 5] = 0; w[e + 6] = 0;
     }
     public void EventFrame(double ts, uint id, string name, float intensity, float duration, (float, float, float) dir)
     {
