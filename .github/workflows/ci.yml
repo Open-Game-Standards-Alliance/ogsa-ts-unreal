@@ -12,7 +12,11 @@ env:
 
 jobs:
   conformance:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
@@ -21,14 +25,25 @@ jobs:
           path: OGSA-Telemetry-Standard
       - name: Configure + build
         run: |
-          cmake -S Test -B Test/build
-          cmake --build Test/build
+          cmake -S Test -B Test/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build Test/build --config Release
       - name: Run conformance binary
-        run: Test/build/ogsa_conformance
-              "$GITHUB_WORKSPACE/OGSA-Telemetry-Standard/conformance"
+        # Release subdir only exists for multi-config generators (MSVC on
+        # Windows); Unix Makefiles (Linux/macOS) put the binary straight
+        # in build/.
+        shell: bash
+        run: |
+          bin=Test/build/ogsa_conformance
+          [ -f Test/build/ogsa_conformance.exe ] && bin=Test/build/ogsa_conformance.exe
+          [ -f Test/build/Release/ogsa_conformance.exe ] && bin=Test/build/Release/ogsa_conformance.exe
+          "$bin" "$GITHUB_WORKSPACE/OGSA-Telemetry-Standard/conformance"
 
   blueprint:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
