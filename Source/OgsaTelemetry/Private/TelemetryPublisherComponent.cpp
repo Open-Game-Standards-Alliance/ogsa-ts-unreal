@@ -29,6 +29,13 @@ void UTelemetryPublisherComponent::BeginPlay()
         {
             Socket->SetMulticastLoopback(true);
             Socket->SetMulticastTtl(TTL);
+            if (!LocalInterfaceAddress.IsEmpty())
+            {
+                TSharedRef<FInternetAddr> IfAddr = SS->CreateInternetAddr();
+                bool bIfValid = false;
+                IfAddr->SetIp(*LocalInterfaceAddress, bIfValid);
+                if (bIfValid) Socket->SetMulticastInterface(*IfAddr);
+            }
             TSharedRef<FInternetAddr> Addr = SS->CreateInternetAddr();
             Addr->SetPort((uint32)Port);
             bool bIsValid = false;

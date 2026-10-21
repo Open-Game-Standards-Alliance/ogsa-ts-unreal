@@ -36,6 +36,13 @@ public:
     int32 Port = 40123;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Transport")
     int32 TTL = 1;
+    /// Egress NIC for multicast, as that interface's local IPv4 address
+    /// (e.g. "192.168.1.5"). Empty lets the OS default route pick the
+    /// interface — on a multi-homed host (dedicated servers, VMs, a dev
+    /// machine with a VPN adapter) that can silently pick a NIC with no
+    /// path to the LAN.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Transport")
+    FString LocalInterfaceAddress;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Identity")
     FString GameName;
