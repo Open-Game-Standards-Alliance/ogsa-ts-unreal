@@ -192,6 +192,16 @@ bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
         OutFactor = 5.0 / 9.0;
         return true;
     }
+    // degC -> degF is unreachable today (Fahrenheit is not a legal target
+    // unit, so BindChannel never requests this direction), but the C# core's
+    // Conversions.TryGetConverter implements both directions — mirrored here
+    // so the tables stay in lockstep if that whitelist ever changes.
+    if (Is(From, "degC") && Is(To, "degF"))
+    {
+        OutOffset = 32.0;
+        OutFactor = 9.0 / 5.0;
+        return true;
+    }
     return false;
 }
 
@@ -277,7 +287,7 @@ void UTelemetryPublisherComponent::SendDiscovery()
     Obj.Name = TCHAR_TO_UTF8(*ObjectName);
     Obj.Location = "local";
     Obj.TypeLabel = TCHAR_TO_UTF8(*TypeLabel);
-    Obj.Type = 0; // vehicle
+    Obj.Type = 1; // vehicle (ObjectType ordinal: 0 other, 1 vehicle, ...)
     Obj.Primary = true;
     Obj.Channels.clear();
     Obj.Channels.reserve((size_t)Declarations.Num());
