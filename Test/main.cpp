@@ -236,13 +236,70 @@ int main(int argc, char** argv)
                   std::abs(d.SpecificForce.Z - 2.0f) < 0.1f &&
                   std::abs(d.SpecificForce.Y - g) < 0.1f);
         }
-        { // teleport resets to static values instead of spiking
+        { // teleport resets to static values instead of spiking; engine
+          // velocity supplied throughout, so the move it cannot explain
+          // is a teleport immediately (single-strike path)
             BodyDynamicsDeriver d;
             for (int i = 0; i < 30; i++)
                 d.Sample(dt, { 0, 0, (float)(i * dt) }, { 0, 0, 0, 1 },
                          true, { 0, 0, 1 });
-            d.Sample(dt, { 10, 0, 10 }, { 0, 0, 0, 1 });
+            d.Sample(dt, { 10, 0, 10 }, { 0, 0, 0, 1 }, true, { 0, 0, 1 });
             Check("deriver: teleport resets (gravity only, zero rates)",
+                  std::abs(d.SpecificForce.Y - g) < 1e-3f &&
+                  std::abs(d.SpecificForce.Z) < 1e-3f &&
+                  std::abs(d.AngularVelocity.Y) < 1e-6f);
+        }
+        { // flight/space sims: 300 m/s cruise + 15 m/s^2 sustained thrust,
+          // engine velocity supplied. The old fixed 2.5 m/sample cap
+          // (=125 m/s) reset the estimator every tick, freezing specific
+          // force at the static gravity reaction; it must not reset here.
+            BodyDynamicsDeriver d;
+            double v = 300.0;
+            for (int i = 0; i < 120; i++) // 2 s
+            {
+                double t = i * dt;
+                v += 15.0 * dt;
+                // physical kinematics: x = v0*t + 1/2*a*t^2
+                d.Sample(dt, { 0, 0, (float)(300.0 * t + 0.5 * 15.0 * t * t) },
+                         { 0, 0, 0, 1 }, true, { 0, 0, (float)v });
+            }
+            Check("deriver: fast mover with engine velocity accelerates without reset",
+                  std::abs(d.SpecificForce.Z - 15.0f) < 0.5f &&
+                  std::abs(d.SpecificForce.Y - g) < 0.5f);
+        }
+        { // no velocity measurement: 250 m/s (4.2 m/sample) + gentle
+          // thrust. One inconsistent sample is acceleration onset, not a
+          // teleport — the deriver must converge on the real surge
+          // instead of reset-looping.
+            BodyDynamicsDeriver d;
+            double v = 250.0;
+            for (int i = 0; i < 150; i++) // 2.5 s: filter converges after
+            {                             // the first-sample strike recovers
+                double t = i * dt;
+                v += 5.0 * dt;
+                d.Sample(dt, { 0, 0, (float)(250.0 * t + 0.5 * 5.0 * t * t) },
+                         { 0, 0, 0, 1 });
+            }
+            Check("deriver: fast mover without engine velocity is not a teleport",
+                  std::abs(d.SpecificForce.Z - 5.0f) < 0.5f &&
+                  std::abs(d.SpecificForce.Y - g) < 0.5f);
+        }
+        { // without velocity: a single weird sample could be acceleration
+          // onset; a genuine teleport (one-time jump, then normal motion
+          // inconsistent with the garbage velocity the jump derived) is
+          // strike two — reset, one sample late
+            BodyDynamicsDeriver d;
+            float t = 0;
+            for (int i = 0; i < 30; i++)
+            {
+                d.Sample(dt, { 0, 0, t }, { 0, 0, 0, 1 });
+                t += (float)dt;
+            }
+            d.Sample(dt, { 0, 0, t + 50.0f }, { 0, 0, 0, 1 }); // strike 1: jump
+            Check("deriver: teleport strike 1 derives a spike, not a reset",
+                  d.SpecificForce.Z > 1000.0f);
+            d.Sample(dt, { 0, 0, t }, { 0, 0, 0, 1 }); // strike 2: back on the normal path
+            Check("deriver: teleport without velocity resets on sustained inconsistency",
                   std::abs(d.SpecificForce.Y - g) < 1e-3f &&
                   std::abs(d.SpecificForce.Z) < 1e-3f &&
                   std::abs(d.AngularVelocity.Y) < 1e-6f);
