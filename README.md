@@ -11,6 +11,13 @@ Status: **validated** — serializer conformance 10/10 and end-to-end in UE 5.8 
 dependency) proven byte-identical against the standard's conformance
 corpus via the C# blueprint mirror (`tools/blueprint`, 6/6 MATCH).
 
+**Built with AI assistance.** Significant portions of this plugin
+(including the hand-rolled wire serializer, the frame-conversion math,
+and the unit-conversion table) were written with AI coding assistance
+under human direction and review. Review and test before
+relying on it, especially around networking and the serializer/
+conversion math.
+
 ## Approach: corpus-first, dependency-free
 
 The serializer reproduces the exact Cap'n Proto wire layout emitted by the
