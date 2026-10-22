@@ -1,8 +1,7 @@
 name: ci
 # Standalone checks that need no engine: the C++ conformance binary
-# (corpus byte-exactness + UE frame conversion + deriver, 19 checks) and
-# the C# blueprint mirror (7/7 MATCH, exit 1 on any DIFF). The UE module
-# itself
+# (corpus byte-exactness + UE frame conversion + deriver) and the
+# generated schema writers being current. The UE module itself
 # needs the engine — build it on a self-hosted runner with UE installed:
 #   ./sync-plugin.ps1 -Project ./TestProject -Build
 on: [push, pull_request]
@@ -38,25 +37,28 @@ jobs:
           [ -f Test/build/Release/ogsa_conformance.exe ] && bin=Test/build/Release/ogsa_conformance.exe
           "$bin" "$GITHUB_WORKSPACE/OGSA-Telemetry-Standard/conformance"
 
-  blueprint:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  writers-current:
+    # OgsaTelemetrySchema.h must match what the shared generator emits for
+    # the standard's schema (generated code is never hand-edited).
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
         with:
           repository: ${{ env.ORG }}/OGSA-Telemetry-Standard
           path: OGSA-Telemetry-Standard
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@v7
         with:
-          dotnet-version: "10.0.x"
-      - name: Blueprint mirror (7/7 MATCH)
-        shell: bash
-        run: dotnet run --project tools/blueprint --
-              "$GITHUB_WORKSPACE/OGSA-Telemetry-Standard/conformance/vectors"
+          repository: ${{ env.ORG }}/ogsa-ts-dotnet
+          path: ogsa-ts-dotnet
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - run: pip install pycapnp
+      - run: python ogsa-ts-dotnet/capnp/gen_writers.py --lang cpp
+              --schema OGSA-Telemetry-Standard/ogsa_telemetry.capnp
+              --out Source/OgsaTelemetryCore/Public/OgsaTelemetry/OgsaTelemetrySchema.h
+      - run: git diff --exit-code Source/OgsaTelemetryCore
 
   notify-dotnet:
     # ogsa-ts-dotnet's own lockstep job checks this repo back and can
@@ -70,7 +72,7 @@ jobs:
     # missing; GitHub's own docs don't state it). Skipped entirely (not
     # failed) while unset.
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [conformance, blueprint]
+    needs: [conformance, writers-current]
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
