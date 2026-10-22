@@ -207,6 +207,18 @@ inline void BuildDiscovery(WireBuilder& b, uint16_t schemaVersion,
     b.W[body + 4] = WireBuilder::StructListPtr(body + 4, tag, (int)objects.size() * 9);
     b.W[0] = ((uint64_t)2 << 32) | ((uint64_t)3 << 48); // root: data2 ptr3, off 0
 
+    // Per-object word layout (stride 9 = 1 data + 8 ptr; w = base word).
+    // Check any w+N line below against this table instead of re-deriving
+    // the offset from scratch:
+    //   w+0 data (type u16@0, primary flag u16@2)
+    //   w+1 name            (text ptr)
+    //   w+2 location        (text ptr)
+    //   w+3 typeLabel       (text ptr; omitted if empty)
+    //   w+4 referencePoint  (struct ptr)
+    //   w+5 namedPoints     (NULL — not emitted)
+    //   w+6 drivePoints     (NULL — not emitted)
+    //   w+7 channels        (struct-list ptr; omitted if empty)
+    //   w+8 values          (NULL — not emitted)
     for (size_t oi = 0; oi < objects.size(); oi++)
     {
         const ObjectDecl& o = objects[oi];
@@ -271,6 +283,14 @@ inline void BuildMotion(WireBuilder& b, double timestamp,
     b.W[body + 1] = WireBuilder::StructListPtr(body + 1, tag, n * 7);
     b.W[0] = ((uint64_t)1 << 32) | ((uint64_t)1 << 48);
 
+    // Per-object word layout (stride 7 = 1 data + 6 ptr; e = base word).
+    //   e+0 data (dynamics union discriminant u16@0: 0xFFFF unset, 2 bodyDynamics)
+    //   e+1 name            (text ptr)
+    //   e+2 position        (struct ptr)
+    //   e+3 orientation     (struct ptr)
+    //   e+4 dynamics payload (struct ptr; bodyDynamics when discriminant==2, else NULL)
+    //   e+5 drivePoints     (NULL — not emitted)
+    //   e+6 channels        (struct-list ptr; omitted if empty)
     for (int i = 0; i < n; i++)
     {
         const MotionObjectInput& o = objects[i];
@@ -333,6 +353,12 @@ inline void BuildEventFrame(WireBuilder& b, double timestamp,
     b.W[body + 1] = WireBuilder::StructListPtr(body + 1, tag, n * 5);
     b.W[0] = ((uint64_t)1 << 32) | ((uint64_t)1 << 48);
 
+    // Per-event word layout (stride 5 = 2 data + 3 ptr; e = base word).
+    //   e+0 data0 (id u32@0, intensity f32@4)
+    //   e+1 data1 (duration f32@0, direction-union tag u16@4: 0xFFFF unset, 1 set)
+    //   e+2 name            (text ptr)
+    //   e+3 direction       (struct ptr; NULL if no direction)
+    //   e+4 object          (text ptr)
     for (int i = 0; i < n; i++)
     {
         const EventInput& ev = events[i];
