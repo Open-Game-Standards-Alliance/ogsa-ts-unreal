@@ -1,7 +1,8 @@
 // main.cpp — OGSA-TS C++ serializer conformance test.
-// Rebuilds the standard's seven golden vectors from semantic inputs and
-// byte-compares against conformance/vectors/*.hex, then checks the UE→
-// standard frame conversion. Exit code 0 = all pass.
+// Rebuilds the standard's seven golden vectors from their manifest inputs
+// (canonical OGSA encoding) and byte-compares against
+// conformance/vectors/*.hex, then checks the UE→standard frame conversion
+// and the pose→body-dynamics deriver. Exit code 0 = all pass.
 //
 // Build & run (no engine required):
 //   cmake -B build && cmake --build build && ./build/ogsa_conformance <corpusDir>
@@ -61,17 +62,17 @@ int main(int argc, char** argv)
     WireBuilder b;
 
     { // discovery-minimal
-        ObjectDecl obj; obj.Name = "obj"; obj.Location = "local";
+        ObjectDecl obj; obj.Name = "obj"; obj.RefPointName = "";
         BuildDiscovery(b, 1, 1730000000000000LL, "conformance",
                        Environment{}, { obj });
         CheckVector(corpus, "discovery-minimal", FrameType::Discovery,
                     b.Wrap(FrameType::Discovery));
     }
     { // discovery-channels
-        ObjectDecl obj; obj.Name = "demo_car"; obj.Location = "local";
+        ObjectDecl obj; obj.Name = "demo_car"; obj.RefPointName = "";
         obj.TypeLabel = "conformance car";
         obj.Channels = {
-            { "engine.rpm", "rpm", "", 0, 9000, true },
+            { "engine.rpm", "rpm", "Engine revolutions per minute", 0, 9000, true },
             { "vehicle.speed", "m/s", "", 0, 30, true },
             { "lights.headlights", "", "", 0, 0, false },
         };
@@ -80,11 +81,10 @@ int main(int argc, char** argv)
         CheckVector(corpus, "discovery-channels", FrameType::Discovery,
                     b.Wrap(FrameType::Discovery));
     }
-    { // motion-pose (positionPad mirrors the reference generator's pad bytes)
+    { // motion-pose
         MotionObjectInput o; o.Name = "obj";
         o.Position = { 1.5f, 0.25f, -3.75f };
         o.Orientation = { 0, 0, 0, 1 };
-        o.PositionPad = 0xFFFFFFFF;
         BuildMotion(b, 1.25, { o });
         CheckVector(corpus, "motion-pose", FrameType::Motion,
                     b.Wrap(FrameType::Motion));
@@ -107,15 +107,13 @@ int main(int argc, char** argv)
         CheckVector(corpus, "motion-multi", FrameType::Motion,
                     b.Wrap(FrameType::Motion));
     }
-    { // motion-bodydynamics (pads mirror the reference generator's pad
-      // bytes: position/specificForce carry ffffffff, angularVelocity 0)
+    { // motion-bodydynamics
         MotionObjectInput o; o.Name = "obj";
         o.Position = { 0.5f, 1.25f, -2.5f };
         o.Orientation = { 0, 0.5f, 0, 0.875f };
         o.HasBodyDynamics = true;
         o.SpecificForce = { 0.25f, 9.5f, -1.5f };
         o.AngularVelocity = { -0.125f, 0.375f, 0.75f };
-        o.PositionPad = 0xFFFFFFFF;
         BuildMotion(b, 4.5, { o });
         CheckVector(corpus, "motion-bodydynamics", FrameType::Motion,
                     b.Wrap(FrameType::Motion));

@@ -7,25 +7,32 @@ network, over UDP multicast. Nothing leaves the LAN.
 
 Community & support: [Discord](https://discord.gg/tseF4Q6U99)
 
-Status: **validated** — serializer conformance 10/10 and end-to-end in UE 5.8 (channels=3, r=10 m circle, quaternion norm holds); UE module compiled and the unit-conversion table verified on the wire against the C# core (`OgsaConversionTestActor`, all five probe channels). Hand-rolled C++ serializer (no Cap.n' Proto
-dependency) proven byte-identical against the standard's conformance
-corpus via the C# blueprint mirror (`tools/blueprint`, 6/6 MATCH).
+Status: **validated** — end-to-end in UE 5.8 (channels=3, r=10 m circle, quaternion norm holds); UE module compiled and the unit-conversion table verified on the wire against the C# core (`OgsaConversionTestActor`, all five probe channels). Dependency-free C++ serializer (no Cap'n Proto
+library) byte-identical against the standard's conformance corpus.
 
 **Built with AI assistance.** Significant portions of this plugin
-(including the hand-rolled wire serializer, the frame-conversion math,
+(including the wire serializer, the frame-conversion math,
 and the unit-conversion table) were written with AI coding assistance
 under human direction and review. Review and test before
 relying on it, especially around networking and the serializer/
 conversion math.
 
-## Approach: corpus-first, dependency-free
+## Approach: canonical encoding, dependency-free
 
-The serializer reproduces the exact Cap'n Proto wire layout emitted by the
-reference stack — reverse-engineered from the golden vectors
-(`../OGSA-Telemetry-Standard/conformance/`), proven by `tools/blueprint`
-(a C# mirror that byte-matches all six vectors), and transcribed to C++
-in `Source/OgsaTelemetryCore`. UE games ship **zero third-party
-libraries**: ~2 headers of std-only C++.
+Frames are written in the standard's **canonical OGSA encoding**
+(implementation-capnproto.md, Encoding rules): Cap'n Proto canonical form
+with fixed field presence, so the bytes depend only on the content. Three
+std-only C++17 headers in `Source/OgsaTelemetryCore` do it:
+
+- `OgsaTelemetrySchema.h` — typed writers generated from the schema by
+  `../ogsa-ts-dotnet/capnp/gen_writers.py` (field offsets come from the
+  official Cap'n Proto compiler; the same generator emits the C# core's
+  writers). Never hand-edited.
+- `OgsaTelemetryCanonical.h` — the canonical encoder the writers build on.
+- `OgsaTelemetryWire.h` — the engine-facing frame builders and the OMT1
+  envelope.
+
+UE games ship **zero third-party libraries**.
 
 The standalone conformance test needs no engine:
 
@@ -35,8 +42,17 @@ cmake -B build && cmake --build build
 ./build/ogsa_conformance ../..(path to)/OGSA-Telemetry-Standard/conformance
 ```
 
-Expected: 6 corpus PASS + 4 frame-conversion PASS, exit 0. Run it after
-any serializer change and after every corpus regeneration.
+Expected: every check PASS (corpus vectors byte-identical, frame
+conversion, body-dynamics deriver), exit 0. Run it after any serializer
+change and after every corpus regeneration.
+
+After a schema change, regenerate the writers (needs `pip install pycapnp`):
+
+```
+python ../ogsa-ts-dotnet/capnp/gen_writers.py --lang cpp \
+  --schema ../OGSA-Telemetry-Standard/ogsa_telemetry.capnp \
+  --out Source/OgsaTelemetryCore/Public/OgsaTelemetry/OgsaTelemetrySchema.h
+```
 
 In-engine verification: `sync-plugin.ps1 -Project <path> [-Build]`
 mirrors the plugin into a UE project's `Plugins/OgsaTelemetry` (and with
@@ -74,21 +90,17 @@ test (identity fixed, UE yaw → standard yaw, norm preserved).
 
 | Path | Contents |
 |---|---|
-| `Source/OgsaTelemetryCore/` | Pure C++: wire encoding + frame conversion (no engine deps) |
+| `Source/OgsaTelemetryCore/` | Pure C++: generated schema writers, canonical encoder, frame builders, frame conversion (no engine deps) |
 | `Source/OgsaTelemetry/` | UE module: `UTelemetryPublisherComponent`, FSocket multicast sender, unit conversions |
 | `sync-plugin.ps1` | Mirror the plugin into a UE test project (`-Build` compiles it) |
 | `Test/` | Standalone conformance binary (corpus + conversion checks) |
-| `tools/blueprint/` | C# formula mirror — the proof that the layout math is exact (6/6 MATCH) |
-| `docs/wire-layout.md` | The reverse-engineered layout map (pointer encoding, allocation orders, quirks) |
 
 ## Wire-layout notes
 
-The wire layout is **canonical Cap'n Proto**: proven by decoding the
-corpus with pycapnp (official capnproto C++ 2.x) — all six golden vectors
-read with correct values, and byte-comparison against a pycapnp-built
-message shows identical layout. Allocator-state padding
-(motion-pose's position pad is `ffffffff`) and unset-union tags are
-cosmetic, receiver-safe differences; see `docs/wire-layout.md`.
+Every datagram is valid Cap'n Proto that any official implementation
+decodes, in canonical form: the standard's `conformance/validate.py`
+checks the corpus independently, and the official `capnp convert
+binary:canonical` leaves every corpus vector unchanged.
 
 ## Wiring your game's values
 
