@@ -10,8 +10,9 @@
 # -Build discovers the newest installed engine for the current platform
 # unless -EngineDir overrides it.
 #
-# Only OgsaTelemetry.uplugin and Source/ are mirrored (exact mirror —
-# stale files in the copy are deleted); repo docs/tests/tools stay out.
+# Only OgsaTelemetry.uplugin, Resources/ (plugin icon) and Source/ are
+# mirrored (exact mirror — stale files in the copy are deleted); repo
+# docs/tests/tools stay out.
 #
 # Cross-platform: runs under Windows PowerShell 5.1 or pwsh (Linux/macOS,
 # e.g. a self-hosted runner with UE installed). Uses a pure-PowerShell
@@ -86,6 +87,7 @@ if (-not $uprojectFile) { throw "no .uproject found in $Project" }
 $dst = Join-Path $Project 'Plugins/OgsaTelemetry'
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
 Copy-Item -Path $uplugin -Destination (Join-Path $dst 'OgsaTelemetry.uplugin') -Force
+Sync-Mirror -Source (Join-Path $pluginDir 'Resources') -Destination (Join-Path $dst 'Resources')
 Sync-Mirror -Source (Join-Path $pluginDir 'Source') -Destination (Join-Path $dst 'Source')
 Write-Host "synced -> $dst"
 
