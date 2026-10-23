@@ -4,6 +4,11 @@
 // (pull model) or push per tick (Blueprint-friendly). Pose auto-binds to
 // the owner root component; UE's frame (LH, X-fwd, Y-right, Z-up) converts
 // to the standard's (LH, Z-fwd, X-right, Y-up) in OgsaTelemetryFrame.h.
+//
+// Pause (standard CONVENTIONS C-11): the component ticks even while the
+// game is paused, on a real-time clock, so it keeps streaming and reports
+// the pause on session.paused. A paused world (SetGamePaused) is detected
+// automatically; games that pause another way call SetPaused.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -59,6 +64,21 @@ public:
     /// Bind the owner root component's world pose automatically.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Pose")
     bool bAutoBindRootPose = true;
+
+    /// Report the game as paused (session.paused) while the world is
+    /// paused. Games that pause another way call SetPaused; both sources
+    /// combine.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Pause")
+    bool bAutoDetectPause = true;
+
+    /// Reports a pause the engine can't see (a game-managed pause that
+    /// leaves the world running). Combines with bAutoDetectPause: the game
+    /// is paused if either says so.
+    UFUNCTION(BlueprintCallable, Category = "OGSA")
+    void SetPaused(bool bPaused);
+    /// Whether the component is currently reporting a pause.
+    UFUNCTION(BlueprintPure, Category = "OGSA")
+    bool IsReportingPause() const { return bPausedNow; }
 
     // ---- declarations (BeginPlay; locked at first tick) ----
     UFUNCTION(BlueprintCallable, Category = "OGSA")
@@ -122,8 +142,11 @@ private:
     TSharedPtr<FInternetAddr> Endpoint;
     double LastDiscovery = -1e18, LastMotion = -1e18, LastEventSend = -1e18;
     double Clock = 0;
+    double ClockOrigin = -1;    // FPlatformTime at the first tick
     int64 SessionStartUnixUs = 0;
     bool bLocked = false;
+    FOgsaChannelHandle PauseChannel;
+    bool bManualPaused = false, bPausedNow = false;
 
     ogsa::telemetry::Vec3 BodySpecificForce, BodyAngularVelocity;
     bool bHasBodyDynamics = false;

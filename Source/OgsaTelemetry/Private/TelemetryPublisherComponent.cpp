@@ -3,6 +3,8 @@
 #include "Sockets.h"
 #include "SocketSubsystem.h"
 #include "Misc/App.h"
+#include "HAL/PlatformTime.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
 
@@ -11,11 +13,14 @@ using namespace ogsa::telemetry;
 UTelemetryPublisherComponent::UTelemetryPublisherComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
+    // C-11: keep streaming while the game is paused
+    PrimaryComponentTick.bTickEvenWhenPaused = true;
 }
 
 void UTelemetryPublisherComponent::BeginPlay()
 {
     Super::BeginPlay();
+    PauseChannel = DeclareBooleanChannel(TEXT("session.paused"));
 
     FDateTime Now = FDateTime::UtcNow();
     SessionStartUnixUs =
@@ -121,6 +126,11 @@ void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
         }
         Bindings[Handle.Id].bBoolValue = Value;
     }
+}
+
+void UTelemetryPublisherComponent::SetPaused(bool bPaused)
+{
+    bManualPaused = bPaused;
 }
 
 void UTelemetryPublisherComponent::SetBodyDynamics(FVector SpecificForce,
@@ -316,7 +326,9 @@ void UTelemetryPublisherComponent::SendMotion()
                                      (float)Q.Z, (float)Q.W });
     }
 
-    if (bHasBodyDynamics)
+    // C-11: nothing is measured while the simulation is stopped, and a
+    // derivative across the pause boundary is meaningless
+    if (bHasBodyDynamics && !bPausedNow)
     {
         O.HasBodyDynamics = true;
         O.SpecificForce = BodySpecificForce;
@@ -352,8 +364,17 @@ void UTelemetryPublisherComponent::TickComponent(
     float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTick)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTick);
-    Clock += DeltaTime;
+    // real time, not DeltaTime: dilation and pause must not slow or stop
+    // the stream (C-11)
+    const double Now = FPlatformTime::Seconds();
+    if (ClockOrigin < 0) ClockOrigin = Now;
+    Clock = Now - ClockOrigin;
     bLocked = true;
+
+    const UWorld* World = GetWorld();
+    bPausedNow = bManualPaused || (bAutoDetectPause && World && World->IsPaused());
+    if (Bindings.IsValidIndex(PauseChannel.Id))
+        Bindings[PauseChannel.Id].bBoolValue = bPausedNow;
 
     if (Clock - LastDiscovery >= DiscoveryIntervalSeconds)
     {
