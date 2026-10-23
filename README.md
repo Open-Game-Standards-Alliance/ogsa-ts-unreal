@@ -107,6 +107,14 @@ decodes, in canonical form: the standard's `conformance/validate.py`
 checks the corpus independently, and the official `capnp convert
 binary:canonical` leaves every corpus vector unchanged.
 
+## Pause
+
+The publisher keeps streaming while the game is paused and reports the
+pause on the ratified `session.paused` channel ([CONVENTIONS C-11](https://github.com/Open-Game-Standards-Alliance/OGSA-Telemetry-Standard/blob/main/CONVENTIONS.md#c-11-pause)), so motion
+rigs and haptics come to rest instead of freezing mid-move or dropping
+the session. A paused world (`SetGamePaused`) is detected automatically (`bAutoDetectPause`; the component ticks even when paused);
+games that pause another way call `SetPaused` (Blueprint-callable). Nothing to wire.
+
 ## Wiring your game's values
 
 **C++ (pull model)** — declare in `BeginPlay`, bind lambdas over your
