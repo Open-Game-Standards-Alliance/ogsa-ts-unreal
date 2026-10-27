@@ -1,8 +1,8 @@
 using UnrealBuildTool;
 
-public class OgsaTelemetryTest : ModuleRules
+public class OgsTelemetryTest : ModuleRules
 {
-    public OgsaTelemetryTest(ReadOnlyTargetRules Target) : base(Target)
+    public OgsTelemetryTest(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PublicDependencyModuleNames.AddRange(new[]

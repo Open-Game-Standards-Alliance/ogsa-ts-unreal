@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "OGS Telemetry (OGS-TS)",
+	"Description": "Broadcast OGS-TS motion/event telemetry over UDP multicast to motion platforms, haptics, and dashboards on the local network",
+	"Category": "Telemetry",
+	"CreatedBy": "Open Game Standards",
+	"CanContainContent": false,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "OgsTelemetryCore",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "OgsTelemetry",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

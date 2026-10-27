@@ -1,14 +1,14 @@
-// OgsaConversionTestActor.cpp — see header.
+// OgsConversionTestActor.cpp — see header.
 //
 // Expected wire values in the TelemetryReceive motion line (object
 // 'conversion_test'), every ~3 s while PIE runs:
 //   0=20.00 1=100.00 2=1.00 3=1.50 4=0.00 5=1.00 6=101325.00
 // Channel 4 must be 0.00 (rejected bind falls back to push-default), and
 // the UE Output Log carries the rejection error for 't.bad'.
-#include "OgsaConversionTestActor.h"
+#include "OgsConversionTestActor.h"
 #include "Components/SceneComponent.h"
 
-AOgsaConversionTestActor::AOgsaConversionTestActor()
+AOgsConversionTestActor::AOgsConversionTestActor()
 {
     PrimaryActorTick.bCanEverTick = false;
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -17,7 +17,7 @@ AOgsaConversionTestActor::AOgsaConversionTestActor()
     Telemetry->ObjectName = TEXT("conversion_test");
 }
 
-void AOgsaConversionTestActor::BeginPlay()
+void AOgsConversionTestActor::BeginPlay()
 {
     Super::BeginPlay(); // component (incl. socket) initializes first
 

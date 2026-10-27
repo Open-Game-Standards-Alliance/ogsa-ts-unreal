@@ -10,7 +10,7 @@
 # -Build discovers the newest installed engine for the current platform
 # unless -EngineDir overrides it.
 #
-# Only OgsaTelemetry.uplugin, Resources/ (plugin icon) and Source/ are
+# Only OgsTelemetry.uplugin, Resources/ (plugin icon) and Source/ are
 # mirrored (exact mirror — stale files in the copy are deleted); repo
 # docs/tests/tools stay out.
 #
@@ -76,7 +76,7 @@ function Sync-Mirror {
 }
 
 $pluginDir = $PSScriptRoot
-$uplugin = Join-Path $pluginDir 'OgsaTelemetry.uplugin'
+$uplugin = Join-Path $pluginDir 'OgsTelemetry.uplugin'
 if (-not (Test-Path $uplugin)) { throw "not run from the plugin root: $uplugin missing" }
 
 if ($Project.EndsWith('.uproject')) { $Project = Split-Path $Project -Parent }
@@ -84,9 +84,9 @@ $Project = (Resolve-Path $Project).Path
 $uprojectFile = Get-ChildItem $Project -Filter '*.uproject' | Select-Object -First 1
 if (-not $uprojectFile) { throw "no .uproject found in $Project" }
 
-$dst = Join-Path $Project 'Plugins/OgsaTelemetry'
+$dst = Join-Path $Project 'Plugins/OgsTelemetry'
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
-Copy-Item -Path $uplugin -Destination (Join-Path $dst 'OgsaTelemetry.uplugin') -Force
+Copy-Item -Path $uplugin -Destination (Join-Path $dst 'OgsTelemetry.uplugin') -Force
 Sync-Mirror -Source (Join-Path $pluginDir 'Resources') -Destination (Join-Path $dst 'Resources')
 Sync-Mirror -Source (Join-Path $pluginDir 'Source') -Destination (Join-Path $dst 'Source')
 Write-Host "synced -> $dst"

@@ -1,5 +1,5 @@
 // DemoVehicle.h — circling demo vehicle feeding rpm/speed/headlights
-// channels. Pair with ogsa-ts-dotnet's TelemetryReceive.
+// channels. Pair with ogs-ts-dotnet's TelemetryReceive.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,14 +15,14 @@ class ADemoVehicle : public AActor
 public:
     ADemoVehicle();
 
-    UPROPERTY(VisibleAnywhere, Category = "OGSA")
+    UPROPERTY(VisibleAnywhere, Category = "OGS")
     UTelemetryPublisherComponent* Telemetry;
 
     /// UE works in centimetres; the publisher converts to metres.
-    UPROPERTY(EditAnywhere, Category = "OGSA")
+    UPROPERTY(EditAnywhere, Category = "OGS")
     float RadiusCm = 1000.f;
 
-    UPROPERTY(EditAnywhere, Category = "OGSA")
+    UPROPERTY(EditAnywhere, Category = "OGS")
     float AngularSpeed = 0.8f; // rad/s
 
     virtual void BeginPlay() override;
@@ -30,5 +30,5 @@ public:
 
 private:
     double T = 0;
-    FOgsaChannelHandle Rpm, Speed, Headlights;
+    FOgsChannelHandle Rpm, Speed, Headlights;
 };

@@ -8,7 +8,7 @@
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
 
-using namespace ogsa::telemetry;
+using namespace ogs::telemetry;
 
 UTelemetryPublisherComponent::UTelemetryPublisherComponent()
 {
@@ -29,7 +29,7 @@ void UTelemetryPublisherComponent::BeginPlay()
     ISocketSubsystem* SS = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
     if (SS)
     {
-        Socket = SS->CreateSocket(NAME_DGram, TEXT("OgsaTelemetry"), false);
+        Socket = SS->CreateSocket(NAME_DGram, TEXT("OgsTelemetry"), false);
         if (Socket)
         {
             Socket->SetMulticastLoopback(true);
@@ -61,7 +61,7 @@ void UTelemetryPublisherComponent::EndPlay(const EEndPlayReason::Type Reason)
     Super::EndPlay(Reason);
 }
 
-FOgsaChannelHandle UTelemetryPublisherComponent::DeclareChannel(
+FOgsChannelHandle UTelemetryPublisherComponent::DeclareChannel(
     const FString& Name, const FString& Unit,
     double Min, double Max, bool HasRange)
 {
@@ -72,9 +72,9 @@ FOgsaChannelHandle UTelemetryPublisherComponent::DeclareChannel(
         // receivers (which cache descriptors by id) never discover.
         // The rejected handle keeps Id = -1; bind/push calls reject it.
         UE_LOG(LogTemp, Error,
-            TEXT("OGSA-TS: DeclareChannel('%s') after the first tick — declarations are locked (receivers cache descriptors by id)"),
+            TEXT("OGS-TS: DeclareChannel('%s') after the first tick — declarations are locked (receivers cache descriptors by id)"),
             *Name);
-        return FOgsaChannelHandle();
+        return FOgsChannelHandle();
     }
     ChannelDecl D;
     D.Name = TCHAR_TO_UTF8(*Name);
@@ -82,20 +82,20 @@ FOgsaChannelHandle UTelemetryPublisherComponent::DeclareChannel(
     D.Min = Min; D.Max = Max; D.HasRange = HasRange;
     Declarations.Add(D);
     Bindings.Add({});
-    FOgsaChannelHandle H; H.Id = Declarations.Num() - 1;
+    FOgsChannelHandle H; H.Id = Declarations.Num() - 1;
     return H;
 }
 
-FOgsaChannelHandle UTelemetryPublisherComponent::DeclareBooleanChannel(
+FOgsChannelHandle UTelemetryPublisherComponent::DeclareBooleanChannel(
     const FString& Name)
 {
-    FOgsaChannelHandle H = DeclareChannel(Name, TEXT(""), 0, 0, false);
+    FOgsChannelHandle H = DeclareChannel(Name, TEXT(""), 0, 0, false);
     if (H.Id >= 0)
         Bindings[H.Id].bBool = true;
     return H;
 }
 
-void UTelemetryPublisherComponent::SetChannel(FOgsaChannelHandle Handle,
+void UTelemetryPublisherComponent::SetChannel(FOgsChannelHandle Handle,
                                               double Value)
 {
     if (Bindings.IsValidIndex(Handle.Id))
@@ -104,7 +104,7 @@ void UTelemetryPublisherComponent::SetChannel(FOgsaChannelHandle Handle,
         {
             // parity with the C# core: type mismatch is rejected, not coerced
             UE_LOG(LogTemp, Error,
-                TEXT("OGSA-TS: SetChannel(double) on boolean channel id %d rejected"),
+                TEXT("OGS-TS: SetChannel(double) on boolean channel id %d rejected"),
                 Handle.Id);
             return;
         }
@@ -112,7 +112,7 @@ void UTelemetryPublisherComponent::SetChannel(FOgsaChannelHandle Handle,
     }
 }
 
-void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
+void UTelemetryPublisherComponent::SetBoolChannel(FOgsChannelHandle Handle,
                                                   bool Value)
 {
     if (Bindings.IsValidIndex(Handle.Id))
@@ -120,7 +120,7 @@ void UTelemetryPublisherComponent::SetBoolChannel(FOgsaChannelHandle Handle,
         if (!Bindings[Handle.Id].bBool)
         {
             UE_LOG(LogTemp, Error,
-                TEXT("OGSA-TS: SetBoolChannel on numeric channel id %d rejected"),
+                TEXT("OGS-TS: SetBoolChannel on numeric channel id %d rejected"),
                 Handle.Id);
             return;
         }
@@ -195,7 +195,7 @@ bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
                                                 double& OutFactor,
                                                 double& OutOffset)
 {
-    // Mirrors Conversions.TryGetFactor in the C# core (ogsa-ts-dotnet):
+    // Mirrors Conversions.TryGetFactor in the C# core (ogs-ts-dotnet):
     // same pairs, same factors. Wire strings per UnitInfo.ToWireString.
     // Keep both tables in lockstep — the engines must provably agree.
     OutOffset = 0;
@@ -253,7 +253,7 @@ bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
 }
 
 void UTelemetryPublisherComponent::BindChannel(
-    const FOgsaChannelHandle& Handle, Getter Source, const FString& SourceUnit)
+    const FOgsChannelHandle& Handle, Getter Source, const FString& SourceUnit)
 {
     if (!Bindings.IsValidIndex(Handle.Id)) return;
     double factor = 1.0, offset = 0.0;
@@ -264,7 +264,7 @@ void UTelemetryPublisherComponent::BindChannel(
         // Reject the bind (channel falls back to the push model) instead
         // of silently emitting wrong units on the wire.
         UE_LOG(LogTemp, Error,
-            TEXT("OGSA-TS: no conversion %s -> %s for channel '%s' (id %d); "
+            TEXT("OGS-TS: no conversion %s -> %s for channel '%s' (id %d); "
                  "bind rejected — convert inside the getter or use BindChannelRaw"),
             *SourceUnit, *Target,
             *FString(UTF8_TO_TCHAR(Declarations[Handle.Id].Name.c_str())),
@@ -277,7 +277,7 @@ void UTelemetryPublisherComponent::BindChannel(
 }
 
 void UTelemetryPublisherComponent::BindChannelRaw(
-    const FOgsaChannelHandle& Handle, Getter Source)
+    const FOgsChannelHandle& Handle, Getter Source)
 {
     if (!Bindings.IsValidIndex(Handle.Id)) return;
     Bindings[Handle.Id].Get = MoveTemp(Source);

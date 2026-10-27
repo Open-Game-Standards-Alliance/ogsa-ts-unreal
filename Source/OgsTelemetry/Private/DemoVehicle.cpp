@@ -10,7 +10,7 @@ ADemoVehicle::ADemoVehicle()
     Telemetry = CreateDefaultSubobject<UTelemetryPublisherComponent>(
         TEXT("TelemetryPublisher"));
     Telemetry->ObjectName = TEXT("demo_car");
-    Telemetry->TypeLabel = TEXT("OGSA-TS UE demo vehicle");
+    Telemetry->TypeLabel = TEXT("OGS-TS UE demo vehicle");
     Telemetry->GameName = TEXT(""); // project name by default
 }
 

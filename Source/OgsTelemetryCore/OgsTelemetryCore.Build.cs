@@ -2,12 +2,12 @@
 // The same sources build standalone for the conformance test (Test/).
 using UnrealBuildTool;
 
-public class OgsaTelemetryCore : ModuleRules
+public class OgsTelemetryCore : ModuleRules
 {
-    public OgsaTelemetryCore(ReadOnlyTargetRules Target) : base(Target)
+    public OgsTelemetryCore(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-        // Public/ is a default include root; headers live in Public/OgsaTelemetry.
+        // Public/ is a default include root; headers live in Public/OgsTelemetry.
         // Headers are std-only; Core is needed just for the module boilerplate.
         PublicDependencyModuleNames.Add("Core");
     }
