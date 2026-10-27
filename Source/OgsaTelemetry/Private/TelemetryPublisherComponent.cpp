@@ -153,6 +153,43 @@ void UTelemetryPublisherComponent::ClearBodyDynamics()
     bHasBodyDynamics = false;
 }
 
+// standard (x right, y up, z fwd) -> UE (X fwd, Y right, Z up): the inverse
+// of ToStandard's cyclic permutation
+static FVector ToUnreal(const Vec3& s) { return FVector(s.Z, s.X, s.Y); }
+
+void UTelemetryPublisherComponent::ApplyGravity(const Vec3& StandardGravity)
+{
+    Environment Next = Env;
+    Next.SetGravity(StandardGravity);
+    if (Next.Gravity == Env.Gravity && Next.HasGravityVector == Env.HasGravityVector &&
+        Next.GravityVector.X == Env.GravityVector.X &&
+        Next.GravityVector.Y == Env.GravityVector.Y &&
+        Next.GravityVector.Z == Env.GravityVector.Z) return;
+    Env = Next;
+    LastDiscovery = -1e18; // re-send on change (C-12)
+}
+
+void UTelemetryPublisherComponent::SetGravity(FVector Gravity)
+{
+    ApplyGravity(ToStandard(Vec3{ (float)Gravity.X, (float)Gravity.Y, (float)Gravity.Z }));
+}
+
+void UTelemetryPublisherComponent::SetLocalGravity(FVector Gravity)
+{
+    LocalGravity = ToStandard(Vec3{ (float)Gravity.X, (float)Gravity.Y, (float)Gravity.Z });
+    bHasLocalGravity = true;
+}
+
+void UTelemetryPublisherComponent::ClearLocalGravity()
+{
+    bHasLocalGravity = false;
+}
+
+FVector UTelemetryPublisherComponent::GetEffectiveGravity() const
+{
+    return ToUnreal(bHasLocalGravity ? LocalGravity : Env.GravityWorld());
+}
+
 bool UTelemetryPublisherComponent::SourceFactor(const FString& From,
                                                 const FString& To,
                                                 double& OutFactor,
@@ -305,7 +342,7 @@ void UTelemetryPublisherComponent::SendDiscovery()
     BuildDiscovery(B, 1, SessionStartUnixUs,
         TCHAR_TO_UTF8(*(GameName.IsEmpty()
             ? FApp::GetProjectName() : GameName)),
-        Environment{}, { Obj });
+        Env, { Obj });
     Send(FrameType::Discovery, B.Wrap(FrameType::Discovery));
 }
 
@@ -334,6 +371,10 @@ void UTelemetryPublisherComponent::SendMotion()
         O.SpecificForce = BodySpecificForce;
         O.AngularVelocity = BodyAngularVelocity;
     }
+    // C-12: local gravity describes its own frame, so it rides every
+    // motion frame while set
+    O.HasLocalGravity = bHasLocalGravity;
+    O.LocalGravity = LocalGravity;
 
     for (int32 i = 0; i < Declarations.Num(); i++)
     {
@@ -375,6 +416,18 @@ void UTelemetryPublisherComponent::TickComponent(
     bPausedNow = bManualPaused || (bAutoDetectPause && World && World->IsPaused());
     if (Bindings.IsValidIndex(PauseChannel.Id))
         Bindings[PauseChannel.Id].bBoolValue = bPausedNow;
+
+    // C-12: the world's gravity (cm/s² along UE Z; negative = down)
+    if (bGravityFromWorld && World)
+    {
+        const float Gz = World->GetGravityZ();
+        if (!bWorldGravityKnown || Gz != LastWorldGravityZ)
+        {
+            bWorldGravityKnown = true;
+            LastWorldGravityZ = Gz;
+            ApplyGravity(ToStandard(Vec3{ 0.f, 0.f, Gz / 100.f }));
+        }
+    }
 
     if (Clock - LastDiscovery >= DiscoveryIntervalSeconds)
     {

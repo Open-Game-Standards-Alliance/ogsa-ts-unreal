@@ -71,6 +71,33 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Pause")
     bool bAutoDetectPause = true;
 
+    /// Declare the world's gravity (GetGravityZ — World Settings / physics)
+    /// as the session gravity (standard CONVENTIONS C-12), at start and
+    /// whenever it changes. An explicit SetGravity stands until then.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OGSA|Gravity")
+    bool bGravityFromWorld = true;
+
+    /// Declares the session gravity: UE world frame, m/s², pointing the way
+    /// gravity pulls (standard gravity is (0, 0, -9.80665)). Straight down
+    /// rides as the scalar alone; any other direction also as a vector.
+    UFUNCTION(BlueprintCallable, Category = "OGSA")
+    void SetGravity(FVector Gravity);
+
+    /// Pushes this object's local gravity per frame (UE world frame, m/s²)
+    /// for gravity that varies by position or changes faster than
+    /// discovery — planet surfaces, rotating habitats. Carried in every
+    /// motion frame until ClearLocalGravity; a zero vector is weightless.
+    UFUNCTION(BlueprintCallable, Category = "OGSA")
+    void SetLocalGravity(FVector Gravity);
+    UFUNCTION(BlueprintCallable, Category = "OGSA")
+    void ClearLocalGravity();
+
+    /// The gravity the stream declares for this object (local, else
+    /// session; UE world frame, m/s²) — compute SetBodyDynamics' specific
+    /// force against it (f = a − g).
+    UFUNCTION(BlueprintPure, Category = "OGSA")
+    FVector GetEffectiveGravity() const;
+
     /// Reports a pause the engine can't see (a game-managed pause that
     /// leaves the world running). Combines with bAutoDetectPause: the game
     /// is paused if either says so.
@@ -150,6 +177,13 @@ private:
 
     ogsa::telemetry::Vec3 BodySpecificForce, BodyAngularVelocity;
     bool bHasBodyDynamics = false;
+
+    ogsa::telemetry::Environment Env;    // discovery environment (C-12 gravity)
+    ogsa::telemetry::Vec3 LocalGravity;  // standard frame, m/s²
+    bool bHasLocalGravity = false;
+    float LastWorldGravityZ = 0.f;       // cm/s², last declared from the world
+    bool bWorldGravityKnown = false;
+    void ApplyGravity(const ogsa::telemetry::Vec3& StandardGravity);
 
     void Send(ogsa::telemetry::FrameType Type,
              const std::vector<uint8_t>& Datagram);

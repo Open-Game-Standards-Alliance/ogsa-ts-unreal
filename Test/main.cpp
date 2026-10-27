@@ -1,5 +1,5 @@
 // main.cpp — OGSA-TS C++ serializer conformance test.
-// Rebuilds the standard's seven golden vectors from their manifest inputs
+// Rebuilds the standard's golden vectors from their manifest inputs
 // (canonical OGSA encoding) and byte-compares against
 // conformance/vectors/*.hex, then checks the UE→standard frame conversion
 // and the pose→body-dynamics deriver. Exit code 0 = all pass.
@@ -134,6 +134,41 @@ int main(int argc, char** argv)
         BuildEventFrame(b, 0.125, { e });
         CheckVector(corpus, "event-impact", FrameType::Event,
                     b.Wrap(FrameType::Event));
+    }
+    { // discovery-gravity-vector
+        ObjectDecl obj; obj.Name = "obj"; obj.RefPointName = "";
+        obj.Type = 4; // spacecraft
+        Environment env = CorpusEnvironment();
+        env.Medium = 10; // vacuum
+        env.SetGravity({ 3, -4, 0 }); // tilted: vector + magnitude 5 (C-12)
+        Check("gravity: tilted vector declares its magnitude",
+              env.HasGravityVector && env.Gravity == 5.0f);
+        BuildDiscovery(b, 1, 1730000000000000LL, "conformance", env, { obj });
+        CheckVector(corpus, "discovery-gravity-vector", FrameType::Discovery,
+                    b.Wrap(FrameType::Discovery));
+    }
+    { // motion-local-gravity
+        MotionObjectInput o; o.Name = "obj";
+        o.Position = { 12, 0.5f, -4 }; o.Orientation = { 0, 0, 0, 1 };
+        o.HasBodyDynamics = true; o.SpecificForce = { 2, 0, 0 };
+        o.HasLocalGravity = true; o.LocalGravity = { -2, 0, 0 };
+        BuildMotion(b, 5.25, { o });
+        CheckVector(corpus, "motion-local-gravity", FrameType::Motion,
+                    b.Wrap(FrameType::Motion));
+    }
+    { // motion-local-gravity-zero
+        MotionObjectInput o; o.Name = "obj";
+        o.Position = { 1, 2, 3 }; o.Orientation = { 0, 0, 0, 1 };
+        o.HasLocalGravity = true; // weightless: selected zero vector
+        BuildMotion(b, 6.5, { o });
+        CheckVector(corpus, "motion-local-gravity-zero", FrameType::Motion,
+                    b.Wrap(FrameType::Motion));
+    }
+    { // straight-down gravity stays the scalar form
+        Environment env;
+        env.SetGravity({ 0, -1.62f, 0 });
+        Check("gravity: straight down rides as the scalar alone",
+              !env.HasGravityVector && env.Gravity == 1.62f);
     }
 
     // ---- UE frame conversion ----
@@ -310,6 +345,19 @@ int main(int argc, char** argv)
                   std::abs(d.SpecificForce.Y - g) < 1e-3f &&
                   std::abs(d.SpecificForce.Z) < 1e-3f &&
                   std::abs(d.AngularVelocity.Y) < 1e-6f);
+        }
+        { // C-12: specific force reacts to the declared gravity vector
+            BodyDynamicsDeriver d;
+            d.GravityVector = { -3, 0, 0 }; // sideways pull toward −x
+            d.Sample(dt, { 0, 0, 0 }, { 0, 0, 0, 1 });
+            Check("deriver: gravity vector sets the static reaction (+sway)",
+                  std::abs(d.SpecificForce.X - 3.0f) < 1e-5f &&
+                  std::abs(d.SpecificForce.Y) < 1e-5f);
+            d.GravityVector = { 0, -3.71f, 0 }; // change mid-stream, no reset
+            d.Sample(dt, { 0, 0, 0 }, { 0, 0, 0, 1 });
+            Check("deriver: gravity change applies without reset",
+                  std::abs(d.SpecificForce.Y - 3.71f) < 1e-4f &&
+                  std::abs(d.SpecificForce.X) < 1e-4f);
         }
     }
 
